@@ -150,7 +150,7 @@ app.post('/login', async (req, res) => {
 
   return res.json({
     success: true,
-    user: student
+    user: studentToSafe(student)
   });
 } else {
       // Staff login — try MongoDB first, fallback to hardcoded
