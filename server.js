@@ -197,10 +197,21 @@ app.get('/user/:role/:id', async (req, res) => {
     const roleKey = normalizeRole(role);
 
     if (roleKey === 'student') {
-      const student = await Student.findOne({ rollNumber: id });
-      if (!student) return res.json({ success: false });
-      return res.json({ success: true, user: studentToSafe(student) });
-    } else {
+
+  const student = await Student.findOne({
+    rollNumber: id.toUpperCase()
+  });
+
+  if (!student) {
+    return res.json({ success: false, message: "Student not found" });
+  }
+
+  // TEMP: Skip password check completely
+  return res.json({
+    success: true,
+    user: student
+  });
+} else {
       let staffUser = null;
       try {
         const dbStaff = await Staff.findOne({ id, role: roleKey });
