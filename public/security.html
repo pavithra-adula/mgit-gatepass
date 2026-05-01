@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SwiftPass — Security</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.pending-exits{display:grid;gap:16px}
+.student-card{background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:20px}
+.student-header{display:flex;gap:16px;align-items:flex-start;margin-bottom:16px}
+.student-photo{width:90px;height:90px;object-fit:cover;border-radius:12px;border:3px solid var(--accent);flex-shrink:0}
+.student-photo-placeholder{width:90px;height:90px;border-radius:12px;border:3px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--card);flex-shrink:0}
+.student-details{flex:1;min-width:0}
+.student-name{font-family:'EB Garamond',serif;font-size:21px;font-weight:600;margin-bottom:6px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.detail-item{font-size:13px;color:var(--muted)}
+.detail-item b{color:var(--text);font-weight:600}
+.verify-controls{border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
+.verify-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.otp-input{font-size:20px;letter-spacing:5px;text-align:center;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);width:160px;font-family:monospace}
+.otp-input:focus{outline:none;border-color:var(--accent)}
+.btn-sm{padding:10px 16px;font-size:13px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s}
+.btn-verify{background:var(--accent2);color:#fff}
+.btn-photo{background:rgba(34,197,94,.15);color:var(--success);border:1.5px solid rgba(34,197,94,.4)}
+.btn-reject{background:rgba(239,68,68,.1);color:var(--danger);border:1.5px solid rgba(239,68,68,.3)}
+.btn-sm:hover{opacity:.85}
+.btn-sm:disabled{opacity:.4;cursor:not-allowed}
+.step-indicator{font-size:12px;font-weight:700;margin-bottom:8px;color:var(--muted)}
+.step-indicator span{color:var(--accent)}
+.status-msg{font-size:13px;margin-top:8px;padding:8px 12px;border-radius:8px}
+.status-ok{background:rgba(34,197,94,.12);color:var(--success)}
+.status-err{background:rgba(239,68,68,.1);color:var(--danger)}
+.expiry-badge{font-size:12px;color:var(--warning);font-weight:600;margin-top:4px}
+</style>
+</head>
+<body class="security-dashboard">
+<div class="topbar">
+  <div class="topbar-logo">MGIT <span>Portal</span></div>
+  <div class="topbar-user">
+    <div class="user-badge">🔒 Security — <b id="uid-display"></b></div>
+    <button class="profile-icon-btn" onclick="openProfileModal()" title="View Profile">👤</button>
+    <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="main">
+  <div class="page-title">Security Dashboard</div>
+  <div class="page-sub">MGIT Gate Pass Management System - verify OTP and authorize secure student exits.</div>
+
+  <div class="card">
+    <div class="card-title">⏳ Students Awaiting Exit</div>
+    <div id="waiting-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Today's Exit Log</div>
+    <div id="exit-log"></div>
+  </div>
+</div>
+
+<script>
+function initTheme(){
+  var t=localStorage.getItem('sp_theme')||'light';
+  document.documentElement.setAttribute('data-theme',t);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
+}
+function toggleTheme(){
+  var cur=document.documentElement.getAttribute('data-theme')||'light';
+  var next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('sp_theme',next);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=next==='dark'?'☀ Light':'🌙 Dark';
+}
+initTheme();
+const userId = sessionStorage.getItem('userId');
+if (!userId || sessionStorage.getItem('role') !== 'security') window.location = 'index.html';
+document.getElementById('uid-display').textContent = userId;
+function logout() { sessionStorage.clear(); window.location = 'index.html'; }
+
+// Track OTP-verified state per request (client-side)
+const otpVerifiedMap = {};
+
+async function verifyOTP(requestId) {
+  const otpInput = document.getElementById('otp_' + requestId);
+  const msgEl = document.getElementById('msg_' + requestId);
+  const otp = otpInput.value.trim();
+
+  if (!otp || otp.length < 4) {
+    showMsg(msgEl, 'Please enter the 6-digit OTP.', false); return;
+  }
+
+  const btn = document.getElementById('verifyBtn_' + requestId);
+  btn.disabled = true; btn.textContent = 'Verifying…';
+
+  const res = await fetch('/security-verify-otp', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ requestId, otp })
+  });
+  const data = await res.json();
+  btn.disabled = false; btn.textContent = '🔓 Verify OTP';
+
+  if (data.success) {
+    otpVerifiedMap[requestId] = true;
+    showMsg(msgEl, '✅ OTP verified! Confirm the photo matches the student, then click "Photo Verification Done".', true);
+    document.getElementById('photoBtn_' + requestId).disabled = false;
+    btn.disabled = true;
+    otpInput.disabled = true;
+  } else {
+    showMsg(msgEl, '❌ ' + (data.message || 'OTP verification failed.'), false);
+  }
+}
+
+async function photoDone(requestId) {
+  const msgEl = document.getElementById('msg_' + requestId);
+  const btn = document.getElementById('photoBtn_' + requestId);
+  btn.disabled = true; btn.textContent = 'Processing…';
+
+  const res = await fetch('/security-photo-approve', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ requestId })
+  });
+  const data = await res.json();
+  if (data.success) {
+    showMsg(msgEl, '🚪 Student exit approved! In-Charge has been notified.', true);
+    setTimeout(loadWaiting, 1500);
+    setTimeout(loadExitLog, 1500);
+  } else {
+    btn.disabled = false; btn.textContent = '📷 Photo Verification Done';
+    showMsg(msgEl, '❌ ' + (data.message || 'Could not approve exit.'), false);
+  }
+}
+
+async function rejectStudent(requestId) {
+  if (!confirm('Reject this student\'s exit request?')) return;
+  const msgEl = document.getElementById('msg_' + requestId);
+  const btn = document.getElementById('rejectBtn_' + requestId);
+  btn.disabled = true;
+
+  const res = await fetch('/security-reject', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ requestId })
+  });
+  const data = await res.json();
+  if (data.success) {
+    showMsg(msgEl, '🚫 Rejected. Student and In-Charge have been notified.', false);
+    setTimeout(loadWaiting, 1800);
+  } else {
+    btn.disabled = false;
+    showMsg(msgEl, '❌ ' + (data.message || 'Rejection failed.'), false);
+  }
+}
+
+function showMsg(el, text, ok) {
+  el.textContent = text;
+  el.className = 'status-msg ' + (ok ? 'status-ok' : 'status-err');
+  el.style.display = 'block';
+}
+
+async function loadWaiting() {
+  const res = await fetch('/requests/security');
+  const data = await res.json();
+  const reqs = data.requests || [];
+  const el = document.getElementById('waiting-list');
+
+  if (!reqs.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">👀</div><div>No students waiting for exit</div></div>';
+    return;
+  }
+
+  // Save current OTP values and messages before re-rendering
+  const savedOtpValues = {};
+  const savedMessages  = {};
+  reqs.forEach(r => {
+    const inp = document.getElementById('otp_' + r.requestId);
+    const msg = document.getElementById('msg_' + r.requestId);
+    if (inp) savedOtpValues[r.requestId] = inp.value;
+    if (msg && msg.style.display !== 'none') {
+      savedMessages[r.requestId] = { text: msg.textContent, className: msg.className };
+    }
+  });
+
+  el.innerHTML = reqs.map(r => {
+    const sd = r.studentData || {};
+    const left = Math.max(0, Math.floor((r.otpExpiry - Date.now()) / 1000));
+    const m = Math.floor(left/60), s = left%60;
+    const expired = left === 0;
+    const alreadyVerified = !!otpVerifiedMap[r.requestId];
+
+    const photoHtml = sd.image
+      ? '<img src="' + sd.image + '" class="student-photo" alt="Student Photo">'
+      : '<div class="student-photo-placeholder">👤</div>';
+
+    return '<div class="student-card" id="card_' + r.requestId + '">' +
+      '<div class="student-header">' +
+        photoHtml +
+        '<div class="student-details">' +
+          '<div class="student-name">' + r.studentId + '</div>' +
+          '<div class="detail-grid">' +
+            '<div class="detail-item"><b>Branch:</b> ' + (sd.branch||'N/A') + '</div>' +
+            '<div class="detail-item"><b>Phone:</b> ' + (sd.phone||'N/A') + '</div>' +
+            '<div class="detail-item"><b>Parent Phone:</b> ' + (sd.parentPhone||'N/A') + '</div>' +
+            '<div class="detail-item"><b>Category:</b> ' + (r.category||'N/A') + '</div>' +
+            '<div class="detail-item" style="grid-column:1/-1"><b>Reason:</b> ' + (r.reason||'N/A') + '</div>' +
+          '</div>' +
+          '<div class="expiry-badge">' + (expired ? '⚠️ OTP Expired' : '⏱ OTP Expires in: ' + m + 'm ' + s + 's') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="verify-controls">' +
+        '<div class="step-indicator">STEP 1: Verify OTP &nbsp;→&nbsp; <span>STEP 2: Confirm Photo Matches</span> &nbsp;→&nbsp; Approve / Reject</div>' +
+        '<div class="verify-row">' +
+          '<input type="text" id="otp_' + r.requestId + '" class="otp-input" placeholder="OTP" maxlength="6"' +
+            (alreadyVerified || expired ? ' disabled' : '') +
+            ' onkeydown="if(event.key===\'Enter\') verifyOTP(\'' + r.requestId + '\')">' +
+          '<button id="verifyBtn_' + r.requestId + '" class="btn-sm btn-verify" onclick="verifyOTP(\'' + r.requestId + '\')"' +
+            (alreadyVerified || expired ? ' disabled' : '') + '>🔓 Verify OTP</button>' +
+          '<button id="photoBtn_' + r.requestId + '" class="btn-sm btn-photo" onclick="photoDone(\'' + r.requestId + '\')"' +
+            (!alreadyVerified || expired ? ' disabled' : '') + '>📷 Photo Verification Done</button>' +
+          '<button id="rejectBtn_' + r.requestId + '" class="btn-sm btn-reject" onclick="rejectStudent(\'' + r.requestId + '\')">✖ Reject</button>' +
+        '</div>' +
+        '<div id="msg_' + r.requestId + '" class="status-msg" style="display:none"></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Restore OTP values and messages after re-render
+  reqs.forEach(r => {
+    const alreadyVerified = !!otpVerifiedMap[r.requestId];
+    const inp = document.getElementById('otp_' + r.requestId);
+    const msg = document.getElementById('msg_' + r.requestId);
+    // Restore typed OTP if not yet verified and input is enabled
+    if (inp && !alreadyVerified && savedOtpValues[r.requestId]) {
+      inp.value = savedOtpValues[r.requestId];
+    }
+    // Restore status message if it was visible
+    if (msg && savedMessages[r.requestId]) {
+      msg.textContent  = savedMessages[r.requestId].text;
+      msg.className    = savedMessages[r.requestId].className;
+      msg.style.display = 'block';
+    }
+  });
+}
+
+async function loadExitLog() {
+  const res = await fetch('/notifications/all_incharge');
+  const data = await res.json();
+  const exits = (data.notifications||[]).filter(n => n.message.includes('exited'));
+  const el = document.getElementById('exit-log');
+  if (!exits.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>No exits logged yet</div></div>';
+    return;
+  }
+  el.innerHTML = exits.reverse().map(n =>
+    '<div class="req-card"><div class="notif-item">' + n.message + '<div class="time">' + new Date(n.time).toLocaleString() + '</div></div></div>'
+  ).join('');
+}
+
+loadWaiting();
+loadExitLog();
+setInterval(() => { loadWaiting(); loadExitLog(); }, 5000);
+
+// ─── Profile Modal ─────────────────────────────────────────────────────────────
+async function openProfileModal() {
+  document.getElementById('profile-overlay').classList.add('open');
+  const role = sessionStorage.getItem('role');
+  const uid  = sessionStorage.getItem('userId');
+  const res  = await fetch('/profile/' + role + '/' + encodeURIComponent(uid));
+  const data = await res.json();
+  const el   = document.getElementById('profile-content');
+  if (!data.success) { el.innerHTML = '<div style="color:var(--danger);font-size:13px">Failed to load profile.</div>'; return; }
+  const p = data.profile;
+  if (p.type === 'student') {
+    const photoHtml = p.photo
+      ? `<img src="${p.photo}" class="pm-photo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      + `<div class="pm-photo-placeholder" style="display:none">🎓</div>`
+      : `<div class="pm-photo-placeholder">🎓</div>`;
+    el.innerHTML = photoHtml +
+      row('Name', p.name || '—') +
+      row('Roll Number', p.rollNumber || '—') +
+      row('Branch', p.branch || '—') +
+      row('Student Phone', p.studentPhone || '—') +
+      row('Parent Name', p.parentName || '—') +
+      row('Parent Phone', p.parentPhone || '—') +
+      (p.email ? row('Email', p.email) : '') +
+      row('Role', '<span class="pm-badge">Student</span>');
+  } else {
+    const roleIcons = {hod:'🏫',incharge:'📋',nurse:'🏥',security:'🔒'};
+    const icon = roleIcons[p.role] || '👤';
+    el.innerHTML =
+      `<div class="pm-photo-placeholder">${icon}</div>` +
+      (p.name ? row('Name', p.name) : '') +
+      row('Staff ID', p.id || '—') +
+      row('Role', `<span class="pm-badge">${(p.role||'').toUpperCase()}</span>`) +
+      (p.email ? row('Email', p.email) : '') +
+      (p.phone ? row('Phone', p.phone) : '');
+  }
+}
+function row(label, value) {
+  return `<div class="pm-row"><div class="pm-label">${label}</div><div class="pm-value">${value}</div></div>`;
+}
+function closeProfileModal() {
+  document.getElementById('profile-overlay').classList.remove('open');
+}
+function closeProfile(e) {
+  if (e.target === document.getElementById('profile-overlay')) closeProfileModal();
+}
+</script>
+
+<!-- Profile Modal -->
+<div class="profile-modal-overlay" id="profile-overlay" onclick="closeProfile(event)">
+  <div class="profile-modal">
+    <button class="profile-modal-close" onclick="closeProfileModal()">✕</button>
+    <div class="profile-modal-title">👤 My Profile</div>
+    <div id="profile-content"><div style="color:var(--muted);font-size:13px">Loading...</div></div>
+  </div>
+</div>
+</body>
+</html>

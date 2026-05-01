@@ -1,0 +1,468 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const mongoose = require("mongoose");
+const app = express();
+
+mongoose.connect("mongodb+srv://admin:Pavithra123@cluster0.f4ihd0q.mongodb.net/?appName=Cluster0")
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log(err));
+
+const userSchema = new mongoose.Schema({
+  id: String,
+  role: String,
+  password: String,
+  phone: String,
+  email: String,
+  rollNumber: String,
+  parentPhone: String,
+  branch: String,
+  image: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const User = mongoose.model("User", userSchema);
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+
+const FILES = {
+  users: path.join(DATA_DIR, 'users.json'),
+  requests: path.join(DATA_DIR, 'requests.json'),
+  otps: path.join(DATA_DIR, 'otps.json'),
+  notifications: path.join(DATA_DIR, 'notifications.json')
+};
+
+Object.values(FILES).forEach(f => {
+  if (!fs.existsSync(f)) fs.writeFileSync(f, '[]');
+});
+
+function read(file) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch { return []; }
+}
+function write(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+// REGISTER
+// REGISTER
+app.post('/register', async (req, res) => {
+  try {
+    const {
+      role,
+      id,
+      password,
+      phone,
+      email,
+      rollNumber,
+      parentPhone,
+      branch,
+      image
+    } = req.body;
+
+    const userId = rollNumber || id;
+
+    const exists = await User.findOne({
+      id: userId,
+      role: role
+    });
+
+    if (exists) {
+      return res.json({
+        success: false,
+        message: "User already exists"
+      });
+    }
+
+    const newUser = new User({
+      id: userId,
+      role,
+      password,
+      phone,
+      email,
+      rollNumber: role === "student" ? rollNumber : "",
+      parentPhone: role === "student" ? parentPhone : "",
+      branch: role === "student" ? branch : "",
+      image: role === "student" ? image : ""
+    });
+
+    await newUser.save();
+
+    res.json({
+      success: true,
+      message: "Account created successfully"
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      success: false,
+      message: "Registration failed"
+    });
+  }
+});
+
+// LOGIN
+app.post('/login', async (req, res) => {
+  try {
+    const { role, id, password } = req.body;
+
+    const user = await User.findOne({
+      id: id,
+      role: role,
+      password: password
+    });
+
+    if (!user) {
+      return res.json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    const safeUser = {
+      id: user.id,
+      role: user.role,
+      phone: user.phone,
+      email: user.email,
+      rollNumber: user.rollNumber,
+      parentPhone: user.parentPhone,
+      branch: user.branch,
+      image: user.image
+    };
+
+    res.json({
+      success: true,
+      user: safeUser
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      success: false,
+      message: "Login failed"
+    });
+  }
+});
+
+// GET USER
+// GET USER
+app.get('/user/:role/:id', async (req, res) => {
+  try {
+    const user = await User.findOne({
+      id: req.params.id,
+      role: req.params.role
+    });
+
+    if (!user) {
+      return res.json({
+        success: false
+      });
+    }
+
+    const safeUser = {
+      id: user.id,
+      role: user.role,
+      phone: user.phone,
+      email: user.email,
+      rollNumber: user.rollNumber,
+      parentPhone: user.parentPhone,
+      branch: user.branch,
+      image: user.image
+    };
+
+    res.json({
+      success: true,
+      user: safeUser
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      success: false
+    });
+  }
+});
+
+// CREATE REQUEST
+app.post('/create-request', (req, res) => {
+  const { studentId, category, reason, otherReason, file, entryTime, exitTime } = req.body;
+  const users = read(FILES.users);
+  const student = users.find(u => u.id === studentId && u.role === 'student');
+  if (!student) return res.json({ success: false, message: 'Student not found' });
+
+  const requests = read(FILES.requests);
+  const active = requests.find(r => r.studentId === studentId && ['pending','nurse','incharge','hod','otp_ready'].includes(r.status));
+  if (active) return res.json({ success: false, message: 'You have a pending request' });
+
+  const reqObj = {
+    requestId: 'REQ_' + Date.now(),
+    studentId,
+    category,
+    reason,
+    otherReason: otherReason || '',
+    file: file || null,
+    entryTime: entryTime || null,
+    exitTime: exitTime || null,
+    status: category === 'medical' ? 'nurse' : 'incharge',
+    createdAt: Date.now(),
+    studentData: {
+      id: student.id,
+      phone: student.phone,
+      parentPhone: student.parentPhone,
+      email: student.email,
+      branch: student.branch,
+      image: student.image
+    }
+  };
+
+  requests.push(reqObj);
+  write(FILES.requests, requests);
+
+  addNotification(studentId, 'student', `Request submitted. Status: ${reqObj.status === 'nurse' ? 'Sent to Nurse' : 'Sent to In-Charge'}`);
+
+  res.json({ success: true, requestId: reqObj.requestId });
+});
+
+// GET REQUESTS BY ROLE/STATUS
+app.get('/requests/:role', (req, res) => {
+  const requests = read(FILES.requests);
+  const role = req.params.role;
+  let filtered;
+  if (role === 'nurse') filtered = requests.filter(r => r.status === 'nurse');
+  else if (role === 'incharge') filtered = requests.filter(r => r.status === 'incharge');
+  else if (role === 'hod') filtered = requests.filter(r => r.status === 'hod');
+  else if (role === 'security') filtered = requests.filter(r => r.status === 'otp_ready');
+  else if (role === 'student') {
+    const sid = req.query.studentId;
+    filtered = requests.filter(r => r.studentId === sid);
+  } else filtered = requests;
+  res.json({ success: true, requests: filtered });
+});
+
+// APPROVE
+app.post('/approve', (req, res) => {
+  const { requestId, role } = req.body;
+  const requests = read(FILES.requests);
+  const idx = requests.findIndex(r => r.requestId === requestId);
+  if (idx === -1) return res.json({ success: false, message: 'Request not found' });
+  const r = requests[idx];
+
+  if (role === 'nurse' && r.status === 'nurse') {
+    r.status = 'incharge';
+    r.nurseApprovedAt = Date.now();
+    addNotification(r.studentId, 'student', 'Nurse approved. Sent to In-Charge.');
+    addNotification('all_incharge', 'incharge', `Medical request from ${r.studentId} forwarded by Nurse.`);
+  } else if (role === 'incharge' && r.status === 'incharge') {
+    r.status = 'hod';
+    r.inchargeApprovedAt = Date.now();
+    addNotification(r.studentId, 'student', 'In-Charge approved. Sent to HOD.');
+    addNotification('all_hod', 'hod', `Request from ${r.studentId} approved by In-Charge.`);
+  } else if (role === 'hod' && r.status === 'hod') {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 600000;
+    r.status = 'otp_ready';
+    r.hodApprovedAt = Date.now();
+    r.otp = otp;
+    r.otpExpiry = expiry;
+    addNotification(r.studentId, 'student', `HOD approved! Your OTP is: ${otp}. Valid for 10 minutes.`);
+    addNotification('all_security', 'security', `Student ${r.studentId} OTP ready for exit.`);
+  } else {
+    return res.json({ success: false, message: 'Invalid role or status' });
+  }
+
+  write(FILES.requests, requests);
+  res.json({ success: true });
+});
+
+// REJECT
+app.post('/reject', (req, res) => {
+  const { requestId, role, reason } = req.body;
+  const requests = read(FILES.requests);
+  const idx = requests.findIndex(r => r.requestId === requestId);
+  if (idx === -1) return res.json({ success: false });
+  const r = requests[idx];
+
+  r.status = 'rejected';
+  r.rejectedBy = role;
+  r.rejectedAt = Date.now();
+  r.rejectionReason = reason || '';
+
+  addNotification(r.studentId, 'student', `Request rejected by ${role}. Reason: ${reason || 'Not specified'}`);
+  if (role === 'nurse') addNotification('all_incharge', 'incharge', `Nurse rejected request from ${r.studentId}.`);
+  if (role === 'hod') addNotification('all_incharge', 'incharge', `HOD rejected request from ${r.studentId}.`);
+
+  write(FILES.requests, requests);
+  res.json({ success: true });
+});
+
+// REJECTED REQUESTS FOR IN-CHARGE (rejected by nurse or hod)
+app.get('/requests/rejected-incharge', (req, res) => {
+  const requests = read(FILES.requests);
+  const filtered = requests.filter(r =>
+    r.status === 'rejected' && (r.rejectedBy === 'nurse' || r.rejectedBy === 'hod')
+  );
+  res.json({ success: true, requests: filtered });
+});
+
+// HOD APPROVED TODAY
+app.get('/hod-approved-today', (req, res) => {
+  const requests = read(FILES.requests);
+  const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+  const approved = requests.filter(r =>
+    r.hodApprovedAt && r.hodApprovedAt >= startOfDay.getTime()
+  );
+  res.json({ success: true, requests: approved });
+});
+
+// VERIFY OTP (Security) — legacy endpoint kept for compatibility
+app.post('/verify-otp', (req, res) => {
+  const { studentId, otp } = req.body;
+  const requests = read(FILES.requests);
+  const req2 = requests.find(r => r.studentId === studentId && r.status === 'otp_ready');
+  if (!req2) return res.json({ success: false, message: 'No pending OTP for this student' });
+
+  if (Date.now() > req2.otpExpiry) {
+    req2.status = 'expired';
+    write(FILES.requests, requests);
+    return res.json({ success: false, message: 'OTP expired' });
+  }
+
+  if (req2.otp !== otp) return res.json({ success: false, message: 'Wrong OTP' });
+
+  req2.status = 'exited';
+  req2.exitedAt = Date.now();
+  write(FILES.requests, requests);
+
+  addNotification(studentId, 'student', `Exit confirmed at ${new Date().toLocaleString()}. Safe travels!`);
+  addNotification('all_incharge', 'incharge', `Student ${studentId} has exited at ${new Date().toLocaleString()}.`);
+
+  const users = read(FILES.users);
+  const student = users.find(u => u.id === studentId && u.role === 'student');
+  const { password: _, ...safe } = (student || {});
+
+  res.json({ success: true, student: safe, exitTime: req2.exitedAt });
+});
+
+// SECURITY: Verify OTP only (step 1 — does not mark as exited)
+app.post('/security-verify-otp', (req, res) => {
+  const { requestId, otp } = req.body;
+  const requests = read(FILES.requests);
+  const req2 = requests.find(r => r.requestId === requestId && r.status === 'otp_ready');
+  if (!req2) return res.json({ success: false, message: 'Request not found or already processed' });
+
+  if (Date.now() > req2.otpExpiry) {
+    req2.status = 'expired';
+    write(FILES.requests, requests);
+    return res.json({ success: false, message: 'OTP expired' });
+  }
+
+  if (req2.otp !== otp) return res.json({ success: false, message: 'Wrong OTP. Please re-check.' });
+
+  // Mark OTP as verified but not yet exited
+  req2.otpVerified = true;
+  write(FILES.requests, requests);
+  res.json({ success: true, message: 'OTP verified. Proceed with photo verification.' });
+});
+
+// SECURITY: Photo verification done — finalize exit
+app.post('/security-photo-approve', (req, res) => {
+  const { requestId } = req.body;
+  const requests = read(FILES.requests);
+  const req2 = requests.find(r => r.requestId === requestId && r.status === 'otp_ready' && r.otpVerified);
+  if (!req2) return res.json({ success: false, message: 'OTP not verified or request not found' });
+
+  req2.status = 'exited';
+  req2.exitedAt = Date.now();
+  write(FILES.requests, requests);
+
+  addNotification(req2.studentId, 'student', `Exit confirmed at ${new Date().toLocaleString()}. Safe travels!`);
+  addNotification('all_incharge', 'incharge', `Student ${req2.studentId} has exited successfully at ${new Date().toLocaleString()}.`);
+
+  res.json({ success: true, exitTime: req2.exitedAt });
+});
+
+// SECURITY: Reject student exit
+app.post('/security-reject', (req, res) => {
+  const { requestId } = req.body;
+  const requests = read(FILES.requests);
+  const idx = requests.findIndex(r => r.requestId === requestId && r.status === 'otp_ready');
+  if (idx === -1) return res.json({ success: false, message: 'Request not found' });
+  const r = requests[idx];
+
+  r.status = 'rejected';
+  r.rejectedBy = 'security';
+  r.rejectedAt = Date.now();
+  write(FILES.requests, requests);
+
+  addNotification(r.studentId, 'student', 'Security rejected your exit request. Please contact In-Charge for assistance.');
+  addNotification('all_incharge', 'incharge', `Security rejected exit request for student ${r.studentId}.`);
+
+  res.json({ success: true });
+});
+
+// NOTIFICATIONS
+function addNotification(targetId, targetRole, message) {
+  const notifs = read(FILES.notifications);
+  notifs.push({ targetId, targetRole, message, time: Date.now(), read: false, id: 'N_' + Date.now() + Math.random() });
+  write(FILES.notifications, notifs);
+}
+
+app.get('/notifications/:targetId', (req, res) => {
+  const notifs = read(FILES.notifications);
+  const filtered = notifs.filter(n => n.targetId === req.params.targetId && !n.read);
+  res.json({ success: true, notifications: filtered });
+});
+
+app.post('/notifications/mark-read', (req, res) => {
+  const { targetId } = req.body;
+  const notifs = read(FILES.notifications);
+  notifs.forEach(n => { if (n.targetId === targetId) n.read = true; });
+  write(FILES.notifications, notifs);
+  res.json({ success: true });
+});
+
+// PERSONAL REQUEST TIME VIOLATION CHECKER
+// Runs every 60 seconds. If a personal request's exitTime has passed and student hasn't exited, notify.
+function checkPersonalTimeViolations() {
+  const requests = read(FILES.requests);
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+
+  requests.forEach(r => {
+    if (
+      r.category === 'personal' &&
+      r.exitTime &&
+      !r.timeViolationNotified &&
+      !['rejected', 'expired', 'exited'].includes(r.status)
+    ) {
+      const exitDateTime = new Date(`${todayStr}T${r.exitTime}:00`);
+      if (now > exitDateTime) {
+        addNotification(
+          r.studentId,
+          'student',
+          `⚠️ Warning: You did not return within the allowed time. Your expected return was ${r.exitTime}. Please report to the In-Charge immediately.`
+        );
+        addNotification(
+          'all_incharge',
+          'incharge',
+          `🚨 Time Violation: Student ${r.studentId} did not return on time. Expected return: ${r.exitTime}. Request ID: ${r.requestId}.`
+        );
+        r.timeViolationNotified = true;
+      }
+    }
+  });
+
+  write(FILES.requests, requests);
+}
+
+checkPersonalTimeViolations();
+setInterval(checkPersonalTimeViolations, 60000);
+
+app.listen(3000, () => console.log('SwiftPass running on http://localhost:3000'));

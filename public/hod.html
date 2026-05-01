@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SwiftPass — HOD</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:90%;max-width:520px;max-height:85vh;overflow-y:auto}
+.modal-title{font-family:'EB Garamond',serif;font-size:20px;font-weight:600;margin-bottom:20px}
+.modal-close{float:right;cursor:pointer;color:var(--muted);font-size:20px}
+.modal-close:hover{color:var(--danger)}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--muted);transition:all .2s}
+.tab.active{border-color:var(--accent);background:rgba(212,175,55,.15);color:var(--accent)}
+.history-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.history-filters input,.history-filters select{padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;outline:none;min-width:140px}
+.history-filters input:focus,.history-filters select:focus{border-color:var(--accent)}
+.history-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1100px}
+.history-table th{background:var(--card2);padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:1}
+.history-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;max-width:160px;word-break:break-word}
+.history-table tr:hover td{background:rgba(212,175,55,.07)}
+.ht-badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.ht-exited{background:rgba(34,197,94,.12);color:var(--success);border:1px solid rgba(34,197,94,.25)}
+.ht-rejected{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.25)}
+.ht-pending,.ht-nurse,.ht-incharge,.ht-hod{background:rgba(234,179,8,.12);color:var(--warning);border:1px solid rgba(234,179,8,.3)}
+.ht-otp_ready{background:rgba(212,175,55,.12);color:var(--accent);border:1px solid rgba(212,175,55,.3)}
+.ht-expired{background:rgba(107,114,128,.12);color:var(--muted);border:1px solid rgba(107,114,128,.25)}
+.ht-medical{color:var(--accent2);font-weight:600}
+.ht-family{color:var(--warning);font-weight:600}
+.ht-personal{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body class="hod-dashboard">
+<div class="topbar">
+  <div class="topbar-logo">MGIT <span>Portal</span></div>
+  <div class="topbar-user">
+    <div class="user-badge">🏫 HOD — <b id="uid-display"></b></div>
+    <button class="profile-icon-btn" onclick="openProfileModal()" title="View Profile">👤</button>
+    <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="main">
+  <div class="page-title">HOD Dashboard</div>
+  <div class="page-sub">MGIT Gate Pass Management System - final approval authority for OTP generation.</div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num" id="stat-pending">0</div><div class="lbl">Awaiting</div></div>
+    <div class="stat-card"><div class="num" id="stat-approved">0</div><div class="lbl">Approved Today</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchHodTab('pending',this)">Pending Requests</button>
+    <button class="tab" onclick="switchHodTab('approved',this)">✅ Approved Today</button>
+    <button class="tab" onclick="switchHodTab('history',this)">📜 Student History</button>
+  </div>
+
+  <div id="hodtab-pending">
+    <div class="card">
+      <div class="card-title">🏫 Requests Awaiting HOD Approval</div>
+      <div id="req-list"></div>
+    </div>
+  </div>
+
+  <div id="hodtab-approved" style="display:none">
+    <div class="card">
+      <div class="card-title">✅ Approved Today</div>
+      <div id="approved-list"></div>
+    </div>
+  </div>
+
+  <div id="hodtab-history" style="display:none">
+    <div class="card">
+      <div class="card-title">📜 Student Exit &amp; Request History</div>
+      <div class="history-filters">
+        <input type="text" id="hf-roll" placeholder="🔍 Roll Number" oninput="loadHistory()">
+        <input type="text" id="hf-name" placeholder="🔍 Student Name" oninput="loadHistory()">
+        <input type="date" id="hf-date" onchange="loadHistory()">
+        <select id="hf-cat" onchange="loadHistory()">
+          <option value="">All Categories</option>
+          <option value="medical">Medical</option>
+          <option value="family">Family</option>
+          <option value="personal">Personal</option>
+        </select>
+        <select id="hf-status" onchange="loadHistory()">
+          <option value="">All Statuses</option>
+          <option value="otp_ready">OTP Ready</option>
+          <option value="exited">Exited ✅</option>
+          <option value="rejected">Rejected ❌</option>
+          <option value="expired">Expired ⏰</option>
+        </select>
+        <button class="btn btn-view" onclick="clearHistoryFilters()">Clear Filters</button>
+      </div>
+      <div id="history-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+      <div id="history-table-wrap" style="overflow-x:auto">
+        <table class="history-table" id="history-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Roll No.</th><th>Student Name</th><th>Branch</th><th>Parent Phone</th>
+              <th>Category</th><th>Reason</th><th>Date of Request</th><th>Exit Time</th>
+              <th>Status</th><th>Approved By</th><th>Rejected By</th><th>Rejection Reason</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <span class="modal-close" onclick="closeModal()">✕</span>
+    <div class="modal-title">Student Details</div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+function initTheme(){
+  var t=localStorage.getItem('sp_theme')||'light';
+  document.documentElement.setAttribute('data-theme',t);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
+}
+function toggleTheme(){
+  var cur=document.documentElement.getAttribute('data-theme')||'light';
+  var next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('sp_theme',next);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=next==='dark'?'☀ Light':'🌙 Dark';
+}
+initTheme();
+const userId = sessionStorage.getItem('userId');
+if (!userId || sessionStorage.getItem('role') !== 'hod') window.location = 'index.html';
+document.getElementById('uid-display').textContent = userId;
+function logout() { sessionStorage.clear(); window.location = 'index.html'; }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function showStudentModal(rStr) {
+  const r = JSON.parse(decodeURIComponent(rStr));
+  const s = r.studentData || {};
+  let html = `<div class="student-profile" style="margin-bottom:16px">`;
+  if (s.image) html += `<img src="${s.image}" alt="student">`;
+  else html += `<div style="width:80px;height:80px;background:var(--card2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:32px;border:2px solid var(--accent)">🎓</div>`;
+  html += `<div class="profile-details">
+    <div class="detail-row"><span>Roll No: </span><b>${r.studentId}</b></div>
+    <div class="detail-row"><span>Phone: </span>${s.phone||'N/A'}</div>
+    <div class="detail-row"><span>Parent Phone: </span>${s.parentPhone||'N/A'}</div>
+    <div class="detail-row"><span>Email: </span>${s.email||'N/A'}</div>
+    <div class="detail-row"><span>Branch: </span>${s.branch||'N/A'}</div>
+  </div></div>`;
+  html += `<div class="req-card" style="margin-top:12px"><b>Category:</b> ${r.category.toUpperCase()}<br><b>Reason:</b> ${r.reason}`;
+  if (r.entryTime) html += `<br><b>Entry Time:</b> ${r.entryTime} &nbsp; <b>Exit:</b> ${r.exitTime}`;
+  html += `<br><b>Submitted:</b> ${new Date(r.createdAt).toLocaleString()}`;
+  if (r.nurseApprovedAt) html += `<br><b>Nurse Approved:</b> ${new Date(r.nurseApprovedAt).toLocaleString()}`;
+  if (r.inchargeApprovedAt) html += `<br><b>In-Charge Approved:</b> ${new Date(r.inchargeApprovedAt).toLocaleString()}`;
+  html += `</div>`;
+  if (r.file) html += `<div style="margin-top:12px"><img src="${r.file}" style="max-width:100%;border-radius:8px;border:1px solid var(--border)"></div>`;
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+async function approve(requestId) {
+  const res = await fetch('/approve', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ requestId, role: 'hod' }) });
+  const d = await res.json();
+  if (d.success) { alert('✅ Approved! OTP generated and sent to student.'); load(); }
+  else alert('Error: ' + d.message);
+}
+
+async function reject(requestId) {
+  const reason = prompt('Rejection reason:') || '';
+  const res = await fetch('/reject', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ requestId, role: 'hod', reason }) });
+  const d = await res.json();
+  if (d.success) { alert('Request rejected.'); load(); }
+}
+
+async function load() {
+  // Load pending requests
+  const res = await fetch('/requests/hod');
+  const data = await res.json();
+  const reqs = data.requests || [];
+  document.getElementById('stat-pending').textContent = reqs.length;
+
+  const el = document.getElementById('req-list');
+  if (!reqs.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🏫</div><div>No pending requests for HOD</div></div>';
+  } else {
+    el.innerHTML = reqs.map(r => {
+      const encoded = encodeURIComponent(JSON.stringify(r));
+      const timeline = [];
+      if (r.nurseApprovedAt) timeline.push(`Nurse ✓`);
+      if (r.inchargeApprovedAt) timeline.push(`In-Charge ✓`);
+      return `<div class="req-card">
+        <div class="req-row">
+          <div class="req-info">
+            <div class="label">Student</div><div class="value big">${r.studentId}</div>
+            <div class="label">Category & Reason</div><div class="value">${r.category.toUpperCase()} — ${r.reason}</div>
+            <div class="label">Branch</div><div class="value">${r.studentData?.branch||'N/A'}</div>
+            ${timeline.length ? `<div class="label">Prior Approvals</div><div class="value">${timeline.join(' → ')}</div>` : ''}
+            <div class="label">Submitted</div><div class="value">${new Date(r.createdAt).toLocaleString()}</div>
+          </div>
+          <span class="badge ${r.category==='medical'?'badge-orange':r.category==='family'?'badge-yellow':'badge-blue'}">${r.category}</span>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-view" onclick="showStudentModal('${encoded}')">View Full Details</button>
+          <button class="btn btn-approve" onclick="approve('${r.requestId}')">✅ Approve & Generate OTP</button>
+          <button class="btn btn-reject" onclick="reject('${r.requestId}')">❌ Reject</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Load approved today
+  const res2 = await fetch('/hod-approved-today');
+  const data2 = await res2.json();
+  const approved = data2.requests || [];
+  document.getElementById('stat-approved').textContent = approved.length;
+
+  const al = document.getElementById('approved-list');
+  if (!approved.length) {
+    al.innerHTML = '<div class="empty-state"><div class="icon">✅</div><div>No approvals yet today</div></div>';
+  } else {
+    al.innerHTML = approved.map(r => `<div class="req-card">
+      <div class="req-row">
+        <div class="req-info">
+          <div class="label">Student</div><div class="value big">${r.studentId}</div>
+          <div class="label">Category & Reason</div><div class="value">${r.category.toUpperCase()} — ${r.reason}</div>
+          <div class="label">Branch</div><div class="value">${r.studentData?.branch||'N/A'}</div>
+          <div class="label">Approved At</div><div class="value">${new Date(r.hodApprovedAt).toLocaleString()}</div>
+        </div>
+        <span class="badge badge-green">approved</span>
+      </div>
+    </div>`).join('');
+  }
+}
+
+load();
+setInterval(load, 4000);
+
+// ─── HOD Tab switching ────────────────────────────────────────────────────────
+function switchHodTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('hodtab-pending').style.display  = tab==='pending'  ? 'block' : 'none';
+  document.getElementById('hodtab-approved').style.display = tab==='approved' ? 'block' : 'none';
+  document.getElementById('hodtab-history').style.display  = tab==='history'  ? 'block' : 'none';
+  if (tab === 'history') loadHistory();
+}
+
+// ─── History ──────────────────────────────────────────────────────────────────
+function clearHistoryFilters() {
+  ['hf-roll','hf-name','hf-date','hf-cat','hf-status'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  loadHistory();
+}
+
+async function loadHistory() {
+  const params = new URLSearchParams({ role: 'hod' });
+  const roll   = document.getElementById('hf-roll').value.trim();
+  const name   = document.getElementById('hf-name').value.trim();
+  const date   = document.getElementById('hf-date').value;
+  const cat    = document.getElementById('hf-cat').value;
+  const status = document.getElementById('hf-status').value;
+  if (roll)   params.set('rollNumber', roll);
+  if (name)   params.set('name', name);
+  if (date)   params.set('date', date);
+  if (cat)    params.set('category', cat);
+  if (status) params.set('status', status);
+
+  const tbody = document.getElementById('history-tbody');
+  const countEl = document.getElementById('history-count');
+  tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>';
+
+  try {
+    const res  = await fetch('/history?' + params.toString());
+    const data = await res.json();
+    if (!data.success) { tbody.innerHTML = '<tr><td colspan="13" style="color:var(--danger);text-align:center;padding:20px">Failed to load.</td></tr>'; return; }
+    const rows = data.history || [];
+    countEl.textContent = rows.length + ' record(s) found';
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:30px">No records found for selected filters.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((r,i) => {
+      const statusClass = 'ht-' + (r.status||'pending').replace(/[^a-z_]/g,'');
+      const statusLabel = {
+        nurse:'At Nurse',incharge:'At In-Charge',hod:'At HOD',
+        otp_ready:'OTP Ready',exited:'Exited ✅',rejected:'Rejected ❌',
+        expired:'Expired ⏰',pending:'Pending'
+      }[r.status] || r.status;
+      const catClass = 'ht-'+(r.category||'');
+      const dateStr  = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      const timeStr  = r.createdAt ? new Date(r.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '';
+      const exitStr  = r.exitedAt  ? new Date(r.exitedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : (r.exitTime || '—');
+      const rejBy    = r.rejectedBy ? r.rejectedBy.charAt(0).toUpperCase()+r.rejectedBy.slice(1) : '—';
+      const reason   = r.reason + (r.otherReason ? ' ('+r.otherReason+')' : '');
+      return `<tr>
+        <td style="color:var(--muted)">${i+1}</td>
+        <td><b>${r.rollNumber||'—'}</b></td>
+        <td>${r.studentName||'—'}</td>
+        <td>${r.branch||'—'}</td>
+        <td>${r.parentPhone||'—'}</td>
+        <td><span class="${catClass}">${(r.category||'—').toUpperCase()}</span></td>
+        <td style="max-width:150px">${reason||'—'}</td>
+        <td><div>${dateStr}</div><div style="font-size:10px;color:var(--muted)">${timeStr}</div></td>
+        <td>${exitStr}</td>
+        <td><span class="ht-badge ${statusClass}">${statusLabel}</span></td>
+        <td>${r.approvedBy||'—'}</td>
+        <td>${r.rejectedBy?rejBy:'—'}</td>
+        <td style="max-width:140px;color:var(--danger)">${r.rejectionReason||'—'}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="13" style="color:var(--danger);text-align:center;padding:20px">Error loading history.</td></tr>';
+  }
+}
+
+// ─── Profile Modal ─────────────────────────────────────────────────────────────
+async function openProfileModal() {
+  document.getElementById('profile-overlay').classList.add('open');
+  const role = sessionStorage.getItem('role');
+  const uid  = sessionStorage.getItem('userId');
+  const res  = await fetch('/profile/' + role + '/' + encodeURIComponent(uid));
+  const data = await res.json();
+  const el   = document.getElementById('profile-content');
+  if (!data.success) { el.innerHTML = '<div style="color:var(--danger);font-size:13px">Failed to load profile.</div>'; return; }
+  const p = data.profile;
+  if (p.type === 'student') {
+    const photoHtml = p.photo
+      ? `<img src="${p.photo}" class="pm-photo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      + `<div class="pm-photo-placeholder" style="display:none">🎓</div>`
+      : `<div class="pm-photo-placeholder">🎓</div>`;
+    el.innerHTML = photoHtml +
+      row('Name', p.name || '—') +
+      row('Roll Number', p.rollNumber || '—') +
+      row('Branch', p.branch || '—') +
+      row('Student Phone', p.studentPhone || '—') +
+      row('Parent Name', p.parentName || '—') +
+      row('Parent Phone', p.parentPhone || '—') +
+      (p.email ? row('Email', p.email) : '') +
+      row('Role', '<span class="pm-badge">Student</span>');
+  } else {
+    const roleIcons = {hod:'🏫',incharge:'📋',nurse:'🏥',security:'🔒'};
+    const icon = roleIcons[p.role] || '👤';
+    el.innerHTML =
+      `<div class="pm-photo-placeholder">${icon}</div>` +
+      (p.name ? row('Name', p.name) : '') +
+      row('Staff ID', p.id || '—') +
+      row('Role', `<span class="pm-badge">${(p.role||'').toUpperCase()}</span>`) +
+      (p.email ? row('Email', p.email) : '') +
+      (p.phone ? row('Phone', p.phone) : '');
+  }
+}
+function row(label, value) {
+  return `<div class="pm-row"><div class="pm-label">${label}</div><div class="pm-value">${value}</div></div>`;
+}
+function closeProfileModal() {
+  document.getElementById('profile-overlay').classList.remove('open');
+}
+function closeProfile(e) {
+  if (e.target === document.getElementById('profile-overlay')) closeProfileModal();
+}
+</script>
+
+<!-- Profile Modal -->
+<div class="profile-modal-overlay" id="profile-overlay" onclick="closeProfile(event)">
+  <div class="profile-modal">
+    <button class="profile-modal-close" onclick="closeProfileModal()">✕</button>
+    <div class="profile-modal-title">👤 My Profile</div>
+    <div id="profile-content"><div style="color:var(--muted);font-size:13px">Loading...</div></div>
+  </div>
+</div>
+</body>
+</html>

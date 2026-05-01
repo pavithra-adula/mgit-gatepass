@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SwiftPass — Nurse</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:90%;max-width:500px;max-height:85vh;overflow-y:auto}
+.modal-title{font-family:'EB Garamond',serif;font-size:20px;font-weight:600;margin-bottom:20px}
+.modal-close{float:right;cursor:pointer;color:var(--muted);font-size:20px}
+.modal-close:hover{color:var(--danger)}
+</style>
+</head>
+<body class="nurse-dashboard">
+<div class="topbar">
+  <div class="topbar-logo">MGIT <span>Portal</span></div>
+  <div class="topbar-user">
+    <div class="user-badge">🏥 Nurse — <b id="uid-display"></b></div>
+    <button class="profile-icon-btn" onclick="openProfileModal()" title="View Profile">👤</button>
+    <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="main">
+  <div class="page-title">Nurse Dashboard</div>
+  <div class="page-sub">MGIT Gate Pass Management System - review and forward medical emergency requests.</div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num" id="stat-pending">0</div><div class="lbl">Pending</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏥 Medical Requests</div>
+    <div id="req-list"></div>
+  </div>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <span class="modal-close" onclick="closeModal()">✕</span>
+    <div class="modal-title">Student Details</div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+function initTheme(){
+  var t=localStorage.getItem('sp_theme')||'light';
+  document.documentElement.setAttribute('data-theme',t);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
+}
+function toggleTheme(){
+  var cur=document.documentElement.getAttribute('data-theme')||'light';
+  var next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('sp_theme',next);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=next==='dark'?'☀ Light':'🌙 Dark';
+}
+initTheme();
+const userId = sessionStorage.getItem('userId');
+if (!userId || sessionStorage.getItem('role') !== 'nurse') window.location = 'index.html';
+document.getElementById('uid-display').textContent = userId;
+function logout() { sessionStorage.clear(); window.location = 'index.html'; }
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function showStudentModal(r) {
+  const s = r.studentData || {};
+  let html = `<div class="student-profile">`;
+  if (s.image) {
+    html += `<img src="${s.image}" alt="student">`;
+  } else {
+    html += `<div class="student-profile" style="width:100px;height:100px;background:var(--card2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:40px;border:2px solid var(--accent)">🎓</div>`;
+  }
+  html += `<div class="profile-details">
+    <div class="detail-row"><span>Roll No: </span><b>${r.studentId}</b></div>
+    <div class="detail-row"><span>Phone: </span>${s.phone||'N/A'}</div>
+    <div class="detail-row"><span>Parent Phone: </span>${s.parentPhone||'N/A'}</div>
+    <div class="detail-row"><span>Email: </span>${s.email||'N/A'}</div>
+    <div class="detail-row"><span>Branch: </span>${s.branch||'N/A'}</div>
+    <div class="detail-row"><span>Reason: </span><b>${r.reason}</b></div>
+    ${r.otherReason ? `<div class="detail-row"><span>Additional Info: </span>${r.otherReason}</div>` : ''}
+    <div class="detail-row"><span>Time: </span>${new Date(r.createdAt).toLocaleString()}</div>
+  </div></div>`;
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+async function approve(requestId) {
+  const res = await fetch('/approve', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ requestId, role: 'nurse' }) });
+  const d = await res.json();
+  if (d.success) { alert('✅ Forwarded to In-Charge'); load(); }
+  else alert('Error: ' + d.message);
+}
+
+async function reject(requestId) {
+  const reason = prompt('Rejection reason (optional):') || '';
+  const res = await fetch('/reject', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ requestId, role: 'nurse', reason }) });
+  const d = await res.json();
+  if (d.success) { alert('Request rejected.'); load(); }
+}
+
+async function load() {
+  const res = await fetch('/requests/nurse');
+  const data = await res.json();
+  const reqs = data.requests || [];
+  document.getElementById('stat-pending').textContent = reqs.length;
+
+  const el = document.getElementById('req-list');
+  if (!reqs.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🏥</div><div>No pending medical requests</div></div>';
+    return;
+  }
+
+  el.innerHTML = reqs.map(r => `
+    <div class="req-card">
+      <div class="req-row">
+        <div class="req-info">
+          <div class="label">Student</div><div class="value big">${r.studentId}</div>
+          <div class="label">Reason</div><div class="value">${r.reason}${r.otherReason ? ` — <em>${r.otherReason}</em>` : ''}</div>
+          <div class="label">Branch</div><div class="value">${r.studentData?.branch||'N/A'}</div>
+          <div class="label">Time</div><div class="value">${new Date(r.createdAt).toLocaleString()}</div>
+        </div>
+        <span class="badge badge-orange">🏥 Medical</span>
+      </div>
+      <div class="btn-actions">
+        <button class="btn btn-view" onclick='showStudentModal(${JSON.stringify(r).replace(/'/g,"&#39;")})'>View Full Details</button>
+        <button class="btn btn-approve" onclick="approve('${r.requestId}')">✅ Approve → In-Charge</button>
+        <button class="btn btn-reject" onclick="reject('${r.requestId}')">❌ Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+load();
+setInterval(load, 4000);
+
+// ─── Profile Modal ─────────────────────────────────────────────────────────────
+async function openProfileModal() {
+  document.getElementById('profile-overlay').classList.add('open');
+  const role = sessionStorage.getItem('role');
+  const uid  = sessionStorage.getItem('userId');
+  const res  = await fetch('/profile/' + role + '/' + encodeURIComponent(uid));
+  const data = await res.json();
+  const el   = document.getElementById('profile-content');
+  if (!data.success) { el.innerHTML = '<div style="color:var(--danger);font-size:13px">Failed to load profile.</div>'; return; }
+  const p = data.profile;
+  if (p.type === 'student') {
+    const photoHtml = p.photo
+      ? `<img src="${p.photo}" class="pm-photo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      + `<div class="pm-photo-placeholder" style="display:none">🎓</div>`
+      : `<div class="pm-photo-placeholder">🎓</div>`;
+    el.innerHTML = photoHtml +
+      row('Name', p.name || '—') +
+      row('Roll Number', p.rollNumber || '—') +
+      row('Branch', p.branch || '—') +
+      row('Student Phone', p.studentPhone || '—') +
+      row('Parent Name', p.parentName || '—') +
+      row('Parent Phone', p.parentPhone || '—') +
+      (p.email ? row('Email', p.email) : '') +
+      row('Role', '<span class="pm-badge">Student</span>');
+  } else {
+    const roleIcons = {hod:'🏫',incharge:'📋',nurse:'🏥',security:'🔒'};
+    const icon = roleIcons[p.role] || '👤';
+    el.innerHTML =
+      `<div class="pm-photo-placeholder">${icon}</div>` +
+      (p.name ? row('Name', p.name) : '') +
+      row('Staff ID', p.id || '—') +
+      row('Role', `<span class="pm-badge">${(p.role||'').toUpperCase()}</span>`) +
+      (p.email ? row('Email', p.email) : '') +
+      (p.phone ? row('Phone', p.phone) : '');
+  }
+}
+function row(label, value) {
+  return `<div class="pm-row"><div class="pm-label">${label}</div><div class="pm-value">${value}</div></div>`;
+}
+function closeProfileModal() {
+  document.getElementById('profile-overlay').classList.remove('open');
+}
+function closeProfile(e) {
+  if (e.target === document.getElementById('profile-overlay')) closeProfileModal();
+}
+</script>
+
+<!-- Profile Modal -->
+<div class="profile-modal-overlay" id="profile-overlay" onclick="closeProfile(event)">
+  <div class="profile-modal">
+    <button class="profile-modal-close" onclick="closeProfileModal()">✕</button>
+    <div class="profile-modal-title">👤 My Profile</div>
+    <div id="profile-content"><div style="color:var(--muted);font-size:13px">Loading...</div></div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,434 @@
+[
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to In-Charge",
+    "time": 1776489080384,
+    "read": true,
+    "id": "N_17764890803840.9649579591927124"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "In-Charge approved. Sent to HOD.",
+    "time": 1776489094069,
+    "read": true,
+    "id": "N_17764890940690.31086375998953153"
+  },
+  {
+    "targetId": "all_hod",
+    "targetRole": "hod",
+    "message": "Request from 24261A1201 approved by In-Charge.",
+    "time": 1776489094072,
+    "read": false,
+    "id": "N_17764890940720.7899449405562167"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "HOD approved! Your OTP is: 969668. Valid for 10 minutes.",
+    "time": 1776489113628,
+    "read": true,
+    "id": "N_17764891136280.573347173457448"
+  },
+  {
+    "targetId": "all_security",
+    "targetRole": "security",
+    "message": "Student 24261A1201 OTP ready for exit.",
+    "time": 1776489113631,
+    "read": false,
+    "id": "N_17764891136310.12573924924426083"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Exit confirmed at 18/4/2026, 10:43:40 am. Safe travels!",
+    "time": 1776489220613,
+    "read": true,
+    "id": "N_17764892206130.13579029599700843"
+  },
+  {
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Student 24261A1201 has exited successfully at 18/4/2026, 10:43:40 am.",
+    "time": 1776489220615,
+    "read": true,
+    "id": "N_17764892206150.46478813330587476"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to In-Charge",
+    "time": 1776489235385,
+    "read": true,
+    "id": "N_17764892353850.5361031130912184"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "In-Charge approved. Sent to HOD.",
+    "time": 1776489241103,
+    "read": true,
+    "id": "N_17764892411030.3945670848487569"
+  },
+  {
+    "targetId": "all_hod",
+    "targetRole": "hod",
+    "message": "Request from 24261A1201 approved by In-Charge.",
+    "time": 1776489241107,
+    "read": false,
+    "id": "N_17764892411070.7936916533276613"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "HOD approved! Your OTP is: 829178. Valid for 10 minutes.",
+    "time": 1776489245802,
+    "read": true,
+    "id": "N_17764892458020.5051887655032031"
+  },
+  {
+    "targetId": "all_security",
+    "targetRole": "security",
+    "message": "Student 24261A1201 OTP ready for exit.",
+    "time": 1776489245805,
+    "read": false,
+    "id": "N_17764892458050.687010870262364"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Exit confirmed at 18/4/2026, 10:44:41 am. Safe travels!",
+    "time": 1776489281172,
+    "read": true,
+    "id": "N_17764892811720.2999692420728719"
+  },
+  {
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Student 24261A1201 has exited successfully at 18/4/2026, 10:44:41 am.",
+    "time": 1776489281173,
+    "read": true,
+    "id": "N_17764892811730.8181176420282623"
+  },
+  {
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to Nurse",
+    "time": 1776779717582,
+    "read": true,
+    "id": "N_17767797175820.8540371816476114"
+  },
+  {
+    "id": "N_17773889521480.24795497722009519",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to Nurse",
+    "time": 1777388952148,
+    "read": true
+  },
+  {
+    "id": "N_17773890062990.7766807094365581",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Nurse approved. Sent to In-Charge.",
+    "time": 1777389006299,
+    "read": true
+  },
+  {
+    "id": "N_17773890063010.3987235574744965",
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Medical request from 24261A1201 forwarded by Nurse.",
+    "time": 1777389006301,
+    "read": true
+  },
+  {
+    "id": "N_17773890461640.8086313529712869",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "In-Charge approved. Sent to HOD.",
+    "time": 1777389046164,
+    "read": true
+  },
+  {
+    "id": "N_17773890461670.23622352881961062",
+    "targetId": "all_hod",
+    "targetRole": "hod",
+    "message": "Request from 24261A1201 approved by In-Charge.",
+    "time": 1777389046167,
+    "read": false
+  },
+  {
+    "id": "N_17773890525070.05906185394385799",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "HOD approved! Your OTP is: 602616. Valid for 10 minutes.",
+    "time": 1777389052507,
+    "read": true
+  },
+  {
+    "id": "N_17773890525110.6980579138516068",
+    "targetId": "all_security",
+    "targetRole": "security",
+    "message": "Student 24261A1201 OTP ready for exit.",
+    "time": 1777389052511,
+    "read": false
+  },
+  {
+    "id": "N_17773890809500.06693335462401773",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Exit confirmed at 28/4/2026, 8:41:20 pm. Safe travels!",
+    "time": 1777389080950,
+    "read": true
+  },
+  {
+    "id": "N_17773890809510.8404577321944806",
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Student 24261A1201 has exited at 28/4/2026, 8:41:20 pm.",
+    "time": 1777389080951,
+    "read": true
+  },
+  {
+    "id": "N_17774502068460.7865286151786228",
+    "targetId": "24261A1226",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to Nurse",
+    "time": 1777450206846,
+    "read": true
+  },
+  {
+    "id": "N_17774502218020.16218997063974228",
+    "targetId": "24261A1226",
+    "targetRole": "student",
+    "message": "Nurse approved. Sent to In-Charge.",
+    "time": 1777450221802,
+    "read": true
+  },
+  {
+    "id": "N_17774502218060.4996997859281792",
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Medical request from 24261A1226 forwarded by Nurse.",
+    "time": 1777450221806,
+    "read": true
+  },
+  {
+    "id": "N_17774502427860.9401309074698605",
+    "targetId": "24261A1226",
+    "targetRole": "student",
+    "message": "In-Charge approved. Sent to HOD.",
+    "time": 1777450242786,
+    "read": true
+  },
+  {
+    "id": "N_17774502427880.03605705801503856",
+    "targetId": "all_hod",
+    "targetRole": "hod",
+    "message": "Request from 24261A1226 approved by In-Charge.",
+    "time": 1777450242788,
+    "read": false
+  },
+  {
+    "id": "N_17774502485930.015329476671276931",
+    "targetId": "24261A1226",
+    "targetRole": "student",
+    "message": "HOD approved! Your OTP is: 953145. Valid for 10 minutes.",
+    "time": 1777450248593,
+    "read": true
+  },
+  {
+    "id": "N_17774502485950.3020310085577068",
+    "targetId": "all_security",
+    "targetRole": "security",
+    "message": "Student 24261A1226 OTP ready for exit.",
+    "time": 1777450248595,
+    "read": false
+  },
+  {
+    "id": "N_17774502868700.9224743408160982",
+    "targetId": "24261A1226",
+    "targetRole": "student",
+    "message": "Exit confirmed at 29/4/2026, 1:41:26 pm. Safe travels!",
+    "time": 1777450286870,
+    "read": true
+  },
+  {
+    "id": "N_17774502868720.4705982026933885",
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Student 24261A1226 has exited at 29/4/2026, 1:41:26 pm.",
+    "time": 1777450286872,
+    "read": true
+  },
+  {
+    "id": "N_17774788286340.2562274388190533",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to In-Charge",
+    "time": 1777478828634,
+    "read": true
+  },
+  {
+    "id": "N_17774788429910.6704135508189144",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "In-Charge approved. Sent to HOD.",
+    "time": 1777478842991,
+    "read": true
+  },
+  {
+    "id": "N_17774788429940.9155648948401791",
+    "targetId": "all_hod",
+    "targetRole": "hod",
+    "message": "Request from 24261A1201 approved by In-Charge.",
+    "time": 1777478842994,
+    "read": false
+  },
+  {
+    "id": "N_17774788485540.13628900704639568",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "HOD approved! Your OTP is: 797981. Valid for 10 minutes.",
+    "time": 1777478848554,
+    "read": true
+  },
+  {
+    "id": "N_17774788485560.7527921371441365",
+    "targetId": "all_security",
+    "targetRole": "security",
+    "message": "Student 24261A1201 OTP ready for exit.",
+    "time": 1777478848556,
+    "read": false
+  },
+  {
+    "id": "N_17774788683490.48475606660510406",
+    "targetId": "24261A1201",
+    "targetRole": "student",
+    "message": "Exit confirmed at 29/4/2026, 9:37:48 pm. Safe travels!",
+    "time": 1777478868349,
+    "read": true
+  },
+  {
+    "id": "N_17774788683520.6029472532474887",
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Student 24261A1201 has exited at 29/4/2026, 9:37:48 pm.",
+    "time": 1777478868352,
+    "read": true
+  },
+  {
+    "id": "N_17775394708850.9208059826605535",
+    "targetId": "24261A1207",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to In-Charge",
+    "time": 1777539470885,
+    "read": true
+  },
+  {
+    "id": "N_17775395249800.2794264600740758",
+    "targetId": "24261A1207",
+    "targetRole": "student",
+    "message": "In-Charge approved. Sent to HOD.",
+    "time": 1777539524980,
+    "read": true
+  },
+  {
+    "id": "N_17775395249950.2160914667767737",
+    "targetId": "all_hod",
+    "targetRole": "hod",
+    "message": "Request from 24261A1207 approved by In-Charge.",
+    "time": 1777539524995,
+    "read": false
+  },
+  {
+    "id": "N_17775395464520.7133562062090106",
+    "targetId": "24261A1207",
+    "targetRole": "student",
+    "message": "HOD approved! Your OTP is: 176563. Valid for 10 minutes.",
+    "time": 1777539546452,
+    "read": true
+  },
+  {
+    "id": "N_17775395464590.7693312650864973",
+    "targetId": "all_security",
+    "targetRole": "security",
+    "message": "Student 24261A1207 OTP ready for exit.",
+    "time": 1777539546459,
+    "read": false
+  },
+  {
+    "id": "N_17775396197110.8728539557760493",
+    "targetId": "24261A1207",
+    "targetRole": "student",
+    "message": "Exit confirmed at 30/4/2026, 2:30:19 pm. Safe travels!",
+    "time": 1777539619711,
+    "read": true
+  },
+  {
+    "id": "N_17775396197130.34978631233783297",
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Student 24261A1207 has exited at 30/4/2026, 2:30:19 pm.",
+    "time": 1777539619713,
+    "read": true
+  },
+  {
+    "id": "N_17775398042090.4830428349381556",
+    "targetId": "24261A1208",
+    "targetRole": "student",
+    "message": "Request submitted. Status: Sent to In-Charge",
+    "time": 1777539804209,
+    "read": true
+  },
+  {
+    "id": "N_17775398264870.9112077706519265",
+    "targetId": "24261A1208",
+    "targetRole": "student",
+    "message": "In-Charge approved. Sent to HOD.",
+    "time": 1777539826487,
+    "read": true
+  },
+  {
+    "id": "N_17775398264900.7871725984881947",
+    "targetId": "all_hod",
+    "targetRole": "hod",
+    "message": "Request from 24261A1208 approved by In-Charge.",
+    "time": 1777539826490,
+    "read": false
+  },
+  {
+    "id": "N_17775398420140.2119141032948576",
+    "targetId": "24261A1208",
+    "targetRole": "student",
+    "message": "HOD approved! Your OTP is: 691931. Valid for 10 minutes.",
+    "time": 1777539842014,
+    "read": true
+  },
+  {
+    "id": "N_17775398420470.5981335672552652",
+    "targetId": "all_security",
+    "targetRole": "security",
+    "message": "Student 24261A1208 OTP ready for exit.",
+    "time": 1777539842047,
+    "read": false
+  },
+  {
+    "id": "N_17775398862300.10426613219567749",
+    "targetId": "24261A1208",
+    "targetRole": "student",
+    "message": "Exit confirmed at 30/4/2026, 2:34:46 pm. Safe travels!",
+    "time": 1777539886230,
+    "read": true
+  },
+  {
+    "id": "N_17775398862320.8584552222994121",
+    "targetId": "all_incharge",
+    "targetRole": "incharge",
+    "message": "Student 24261A1208 has exited at 30/4/2026, 2:34:46 pm.",
+    "time": 1777539886232,
+    "read": true
+  }
+]
