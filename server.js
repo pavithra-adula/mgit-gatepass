@@ -124,14 +124,19 @@ app.post('/login', async (req, res) => {
 
     if (roleKey === 'student') {
       // Student login via MongoDB
-      const student = await Student.findOne({ rollNumber: id });
-      if (!student) {
-        return res.json({ success: false, message: 'Roll number not found. Please check and try again.' });
-      }
-      if (String(student.password) !== String(password)) {
-        return res.json({ success: false, message: 'Incorrect password.' });
-      }
-      return res.json({ success: true, user: studentToSafe(student) });
+      const student = await Student.findOne({
+  rollNumber: id.toUpperCase()
+});
+
+if (!student) {
+  return res.json({ success: false, message: 'Roll number not found. Please check and try again.' });
+}
+
+if (String(student.password).trim() !== String(password).trim()) {
+  return res.json({ success: false, message: 'Incorrect password.' });
+}
+
+return res.json({ success: true, user: studentToSafe(student) });
 
     } else {
       // Staff login — try MongoDB first, fallback to hardcoded
