@@ -5,11 +5,10 @@ const mongoose = require('mongoose');
 const app = express();
 
 // ─── MongoDB Connection ───────────────────────────────────────────────────────
-mongoose.connect(
-  'mongodb://admin:Pavithra123@ac-3z8bfxd-shard-00-00.f4ihd0q.mongodb.net:27017,ac-3z8bfxd-shard-00-01.f4ihd0q.mongodb.net:27017,ac-3z8bfxd-shard-00-02.f4ihd0q.mongodb.net:27017/?ssl=true&replicaSet=atlas-10o2sv-shard-0&authSource=admin&appName=Cluster0'
-)
-  .then(() => console.log('✅ MongoDB Connected to swiftpassDB'))
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ MongoDB Connected'))
   .catch(err => console.log('❌ MongoDB Error:', err));
+
 
 // ─── Student Schema ───────────────────────────────────────────────────────────
 const studentSchema = new mongoose.Schema({
@@ -654,4 +653,6 @@ app.get('/history', async (req, res) => {
 });
 
 // ─── START ────────────────────────────────────────────────────────────────────
-app.listen(3000, () => console.log('🚀 SwiftPass running on http://localhost:3000'));
+app.listen(process.env.PORT || 3000, () =>
+  console.log('🚀 Server running')
+);
