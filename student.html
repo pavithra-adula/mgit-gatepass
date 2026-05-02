@@ -122,23 +122,6 @@
       </div>
     </div>
 
-    <!-- Resubmit reason — shown only when student has already made 1 request today -->
-    <div id="resubmit-reason-section" style="display:none;margin:12px 0;padding:14px;border:1.5px solid var(--accent);border-radius:12px;background:rgba(212,175,55,.07)">
-      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">⚠️ You have already submitted 1 request today. Please select a reason for this second request:</div>
-      <div class="field">
-        <label>Reason for Resubmission</label>
-        <select id="resubmit-reason-select" onchange="handleResubmitOther()">
-          <option value="">Select reason</option>
-          <option value="OTP expired">OTP expired</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div class="field" id="resubmit-other-field" style="display:none">
-        <label>Please specify</label>
-        <input type="text" id="resubmit-other-text" placeholder="Describe your reason...">
-      </div>
-    </div>
-
     <div id="form-msg" style="margin:10px 0;font-size:13px;color:var(--muted)"></div>
     <button class="btn btn-primary" id="submit-btn" onclick="submitRequest()">Submit Request →</button>
   </div>
@@ -196,32 +179,6 @@ function handleOtherReason(cat) {
   }
 }
 
-function handleResubmitOther() {
-  const sel = document.getElementById('resubmit-reason-select');
-  const field = document.getElementById('resubmit-other-field');
-  if (sel.value === 'Other') {
-    field.style.display = 'block';
-  } else {
-    field.style.display = 'none';
-    document.getElementById('resubmit-other-text').value = '';
-  }
-}
-
-async function checkAndShowResubmitSection() {
-  try {
-    const r = await fetch('/request-count-today/' + userId);
-    const d = await r.json();
-    const section = document.getElementById('resubmit-reason-section');
-    if (d.success && d.count === 1) {
-      section.style.display = 'block';
-    } else {
-      section.style.display = 'none';
-    }
-  } catch (e) {
-    // Fail silently; backend enforces the limit anyway
-  }
-}
-
 async function submitRequest() {
   if (!selectedCat) return setMsg('Select a category first');
   const btn = document.getElementById('submit-btn');
@@ -241,28 +198,6 @@ async function submitRequest() {
   }
 
   let body = { studentId: userId, category: selectedCat, reason, otherReason: '' };
-
-  // Include resubmit reason if the section is visible (2nd request today)
-  const resubmitSection = document.getElementById('resubmit-reason-section');
-  if (resubmitSection && resubmitSection.style.display !== 'none') {
-    const resubmitSel = document.getElementById('resubmit-reason-select');
-    const resubmitVal = resubmitSel ? resubmitSel.value : '';
-    if (!resubmitVal) {
-      setMsg('Please select a reason for your second request today.');
-      btn.disabled = false; btn.textContent = 'Submit Request →';
-      return;
-    }
-    body.resubmitReason = resubmitVal;
-    if (resubmitVal === 'Other') {
-      const otherText = (document.getElementById('resubmit-other-text')?.value || '').trim();
-      if (!otherText) {
-        setMsg('Please provide a reason in the text field.');
-        btn.disabled = false; btn.textContent = 'Submit Request →';
-        return;
-      }
-      body.resubmitOtherText = otherText;
-    }
-  }
 
 
 
@@ -288,19 +223,7 @@ async function submitRequest() {
       const field = document.getElementById('other-field-' + c);
       if (field) field.style.display = 'none';
     });
-    // Reset resubmit section
-    const resubmitSel = document.getElementById('resubmit-reason-select');
-    if (resubmitSel) resubmitSel.value = '';
-    const resubmitOther = document.getElementById('resubmit-other-text');
-    if (resubmitOther) resubmitOther.value = '';
-    const resubmitOtherField = document.getElementById('resubmit-other-field');
-    if (resubmitOtherField) resubmitOtherField.style.display = 'none';
-    document.getElementById('resubmit-reason-section').style.display = 'none';
     loadData();
-  } else if (data.requiresResubmitReason) {
-    // Backend says second request needs a reason — show the section
-    document.getElementById('resubmit-reason-section').style.display = 'block';
-    setMsg('⚠️ ' + (data.message || 'Please select a resubmit reason.'));
   } else {
     setMsg('❌ ' + (data.message || 'Submission failed'));
   }
@@ -386,8 +309,6 @@ async function loadData() {
     otpSection.style.display = 'none';
     formSection.style.display = 'block';
     if (otpInterval) clearInterval(otpInterval);
-    // Check if student already has 1 request today — show resubmit reason section if so
-    checkAndShowResubmitSection();
   }
 
   // History
