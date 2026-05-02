@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SwiftPass — Student</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.cat-btn{padding:16px 10px;border:1.5px solid var(--border);background:transparent;color:var(--muted);border-radius:12px;font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center}
+.cat-btn:hover,.cat-btn.active{border-color:var(--accent);background:rgba(212,175,55,.14);color:var(--accent)}
+.cat-icon{font-size:24px;display:block;margin-bottom:6px}
+.sub-options{display:none;animation:fadeIn .2s}
+.sub-options.show{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.status-track{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.track-step{display:flex;flex-direction:column;align-items:center;flex:1;min-width:60px}
+.track-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;margin-bottom:4px;transition:all .3s}
+.track-dot.done{background:var(--success);border-color:var(--success);color:white}
+.track-dot.active{background:var(--accent);border-color:var(--accent);color:white;animation:pulse 1.5s infinite}
+.track-dot.rejected{background:var(--danger);border-color:var(--danger);color:white}
+.track-lbl{font-size:9px;color:var(--muted);text-align:center;letter-spacing:.5px}
+.track-line{flex:1;height:2px;background:var(--border);margin-top:13px;align-self:flex-start}
+.track-line.done{background:var(--success)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,.38)}50%{box-shadow:0 0 0 7px rgba(212,175,55,0)}}
+</style>
+</head>
+<body class="student-dashboard">
+<div class="topbar">
+  <div class="topbar-logo">MGIT <span>Portal</span></div>
+  <div class="topbar-user">
+    <div class="user-badge">🎓 <b id="uid-display"></b></div>
+    <button class="profile-icon-btn" onclick="openProfileModal()" title="View Profile">👤</button>
+    <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="main">
+  <div class="page-title">Student Dashboard</div>
+  <div class="page-sub">MGIT Gate Pass Management System - submit requests and track approvals.</div>
+
+  <!-- Notifications -->
+  <div class="card" id="notif-section" style="display:none">
+    <div class="card-title">🔔 Notifications</div>
+    <div class="notif-list" id="notif-list"></div>
+  </div>
+
+  <!-- Active Request Status -->
+  <div class="card" id="active-req-section" style="display:none">
+    <div class="card-title">📋 Active Request Status</div>
+    <div id="active-req-content"></div>
+  </div>
+
+  <!-- OTP Display -->
+  <div class="card" id="otp-section" style="display:none">
+    <div class="card-title">🔑 Your OTP — Show to Security</div>
+    <div class="otp-display" id="otp-val"></div>
+    <div class="timer-display" id="otp-timer"></div>
+  </div>
+
+  <!-- New Request Form -->
+  <div class="card" id="form-section">
+    <div class="card-title">📝 New Gate Pass Request</div>
+
+    <div class="cat-grid">
+      <button class="cat-btn" onclick="selectCat('medical', this)">
+        <span class="cat-icon">🏥</span>Medical Emergency
+      </button>
+      <button class="cat-btn" onclick="selectCat('family', this)">
+        <span class="cat-icon">👨‍👩‍👦</span>Family Emergency
+      </button>
+      <button class="cat-btn" onclick="selectCat('personal', this)">
+        <span class="cat-icon">🧑</span>Personal
+      </button>
+    </div>
+
+    <div class="sub-options" id="sub-medical">
+      <div class="field"><label>Medical Reason</label>
+        <select id="reason-medical" onchange="handleOtherReason('medical')">
+          <option value="">Select reason</option>
+          <option>Fever</option><option>Headache</option><option>Vomitings</option>
+          <option>Nausea</option><option>Diarrhea</option><option>Doctor Appointment</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field" id="other-field-medical" style="display:none"><label>Enter your reason</label>
+        <input type="text" id="other-reason-medical" placeholder="Type your reason here...">
+      </div>
+    </div>
+
+    <div class="sub-options" id="sub-family">
+      <div class="field"><label>Family Emergency Reason</label>
+        <select id="reason-family" onchange="handleOtherReason('family')">
+          <option value="">Select reason</option>
+          <option>Death in Family</option><option>Care &amp; Hospitalized</option>
+          <option>Emergency Travelling</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field" id="other-field-family" style="display:none"><label>Enter your reason</label>
+        <input type="text" id="other-reason-family" placeholder="Type your reason here...">
+      </div>
+      <div class="field"><label>Supporting Document (required)</label>
+        <input type="file" id="file-family" accept="image/*,.pdf">
+      </div>
+    </div>
+
+    <div class="sub-options" id="sub-personal">
+      <div class="field"><label>Personal Reason</label>
+        <select id="reason-personal" onchange="handleOtherReason('personal')">
+          <option value="">Select reason</option>
+          <option>MSeva</option><option>Fee Payment</option>
+          <option>Other Appointments</option><option>Trip</option><option>Religious</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field" id="other-field-personal" style="display:none"><label>Enter your reason</label>
+        <input type="text" id="other-reason-personal" placeholder="Type your reason here...">
+      </div>
+      <div class="field"><label>Supporting Document (required)</label>
+        <input type="file" id="file-personal" accept="image/*,.pdf">
+      </div>
+    </div>
+
+    <!-- Resubmit reason — shown only when student has already made 1 request today -->
+    <div id="resubmit-reason-section" style="display:none;margin:12px 0;padding:14px;border:1.5px solid var(--accent);border-radius:12px;background:rgba(212,175,55,.07)">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">⚠️ You have already submitted 1 request today. Please select a reason for this second request:</div>
+      <div class="field">
+        <label>Reason for Resubmission</label>
+        <select id="resubmit-reason-select" onchange="handleResubmitOther()">
+          <option value="">Select reason</option>
+          <option value="OTP expired">OTP expired</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field" id="resubmit-other-field" style="display:none">
+        <label>Please specify</label>
+        <input type="text" id="resubmit-other-text" placeholder="Describe your reason...">
+      </div>
+    </div>
+
+    <div id="form-msg" style="margin:10px 0;font-size:13px;color:var(--muted)"></div>
+    <button class="btn btn-primary" id="submit-btn" onclick="submitRequest()">Submit Request →</button>
+  </div>
+
+  <!-- Past Requests -->
+  <div class="card">
+    <div class="card-title">📜 Request History</div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<script>
+function initTheme(){
+  var t=localStorage.getItem('sp_theme')||'light';
+  document.documentElement.setAttribute('data-theme',t);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
+}
+function toggleTheme(){
+  var cur=document.documentElement.getAttribute('data-theme')||'light';
+  var next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('sp_theme',next);
+  var btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=next==='dark'?'☀ Light':'🌙 Dark';
+}
+initTheme();
+const userId = sessionStorage.getItem('userId');
+if (!userId || sessionStorage.getItem('role') !== 'student') {
+  window.location = 'index.html';
+}
+document.getElementById('uid-display').textContent = userId;
+
+let selectedCat = '';
+let otpInterval = null;
+
+function logout() { sessionStorage.clear(); window.location = 'index.html'; }
+
+function selectCat(cat, el) {
+  selectedCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.sub-options').forEach(s => s.classList.remove('show'));
+  document.getElementById('sub-' + cat).classList.add('show');
+}
+
+function handleOtherReason(cat) {
+  const sel = document.getElementById('reason-' + cat);
+  const field = document.getElementById('other-field-' + cat);
+  if (sel.value === 'Other') {
+    field.style.display = 'block';
+  } else {
+    field.style.display = 'none';
+    document.getElementById('other-reason-' + cat).value = '';
+  }
+}
+
+function handleResubmitOther() {
+  const sel = document.getElementById('resubmit-reason-select');
+  const field = document.getElementById('resubmit-other-field');
+  if (sel.value === 'Other') {
+    field.style.display = 'block';
+  } else {
+    field.style.display = 'none';
+    document.getElementById('resubmit-other-text').value = '';
+  }
+}
+
+async function checkAndShowResubmitSection() {
+  try {
+    const r = await fetch('/request-count-today/' + userId);
+    const d = await r.json();
+    const section = document.getElementById('resubmit-reason-section');
+    if (d.success && d.count === 1) {
+      section.style.display = 'block';
+    } else {
+      section.style.display = 'none';
+    }
+  } catch (e) {
+    // Fail silently; backend enforces the limit anyway
+  }
+}
+
+async function submitRequest() {
+  if (!selectedCat) return setMsg('Select a category first');
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const sel = document.getElementById('reason-' + selectedCat);
+  const selValue = sel?.value;
+
+  let reason;
+  if (selValue === 'Other') {
+    const customText = document.getElementById('other-reason-' + selectedCat)?.value.trim();
+    if (!customText) { setMsg('Please enter your reason'); btn.disabled=false; btn.textContent='Submit Request →'; return; }
+    reason = customText;
+  } else {
+    if (!selValue) { setMsg('Select a reason'); btn.disabled=false; btn.textContent='Submit Request →'; return; }
+    reason = selValue;
+  }
+
+  let body = { studentId: userId, category: selectedCat, reason, otherReason: '' };
+
+  // Include resubmit reason if the section is visible (2nd request today)
+  const resubmitSection = document.getElementById('resubmit-reason-section');
+  if (resubmitSection && resubmitSection.style.display !== 'none') {
+    const resubmitSel = document.getElementById('resubmit-reason-select');
+    const resubmitVal = resubmitSel ? resubmitSel.value : '';
+    if (!resubmitVal) {
+      setMsg('Please select a reason for your second request today.');
+      btn.disabled = false; btn.textContent = 'Submit Request →';
+      return;
+    }
+    body.resubmitReason = resubmitVal;
+    if (resubmitVal === 'Other') {
+      const otherText = (document.getElementById('resubmit-other-text')?.value || '').trim();
+      if (!otherText) {
+        setMsg('Please provide a reason in the text field.');
+        btn.disabled = false; btn.textContent = 'Submit Request →';
+        return;
+      }
+      body.resubmitOtherText = otherText;
+    }
+  }
+
+
+
+  if (selectedCat === 'family' || selectedCat === 'personal') {
+    const fi = document.getElementById('file-' + selectedCat);
+    if (!fi.files.length) { setMsg('Supporting document is required'); btn.disabled=false; btn.textContent='Submit Request →'; return; }
+    body.file = await fileToBase64(fi.files[0]);
+  }
+
+  const res = await fetch('/create-request', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const data = await res.json();
+
+  if (data.success) {
+    setMsg('✅ Request submitted successfully!');
+    selectedCat = '';
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.sub-options').forEach(s => s.classList.remove('show'));
+    ['medical','family','personal'].forEach(c => {
+      const sel = document.getElementById('reason-' + c);
+      if (sel) sel.value = '';
+      const el = document.getElementById('other-reason-' + c);
+      if (el) el.value = '';
+      const field = document.getElementById('other-field-' + c);
+      if (field) field.style.display = 'none';
+    });
+    // Reset resubmit section
+    const resubmitSel = document.getElementById('resubmit-reason-select');
+    if (resubmitSel) resubmitSel.value = '';
+    const resubmitOther = document.getElementById('resubmit-other-text');
+    if (resubmitOther) resubmitOther.value = '';
+    const resubmitOtherField = document.getElementById('resubmit-other-field');
+    if (resubmitOtherField) resubmitOtherField.style.display = 'none';
+    document.getElementById('resubmit-reason-section').style.display = 'none';
+    loadData();
+  } else if (data.requiresResubmitReason) {
+    // Backend says second request needs a reason — show the section
+    document.getElementById('resubmit-reason-section').style.display = 'block';
+    setMsg('⚠️ ' + (data.message || 'Please select a resubmit reason.'));
+  } else {
+    setMsg('❌ ' + (data.message || 'Submission failed'));
+  }
+  btn.disabled=false; btn.textContent='Submit Request →';
+}
+
+function setMsg(txt) { document.getElementById('form-msg').textContent = txt; }
+
+function fileToBase64(f) {
+  return new Promise((res,rej) => { const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f); });
+}
+
+function statusLabel(s) {
+  const m = {nurse:'⏳ With Nurse',incharge:'⏳ With In-Charge',hod:'⏳ With HOD',
+    otp_ready:'✅ OTP Ready',exited:'🚪 Exited',rejected:'❌ Rejected',expired:'⌛ OTP Expired'};
+  return m[s] || s;
+}
+
+function trackSteps(req) {
+  const isMedical = req.category === 'medical';
+  let steps = isMedical
+    ? ['Student','Nurse','In-Charge','HOD','OTP','Security']
+    : ['Student','In-Charge','HOD','OTP','Security'];
+  const statusMap = { nurse:1, incharge: isMedical?2:1, hod: isMedical?3:2, otp_ready: isMedical?4:3, exited: isMedical?5:4, rejected:-1 };
+  const cur = statusMap[req.status] ?? 0;
+  let html = '<div class="status-track">';
+  steps.forEach((s,i) => {
+    let cls = i < cur ? 'done' : (i === cur ? 'active' : '');
+    if (req.status === 'rejected') cls = i === cur ? 'rejected' : (i < cur ? 'done' : '');
+    html += `<div class="track-step"><div class="track-dot ${cls}">${i < cur ? '✓' : i+1}</div><div class="track-lbl">${s}</div></div>`;
+    if (i < steps.length-1) html += `<div class="track-line ${i < cur ? 'done' : ''}"></div>`;
+  });
+  return html + '</div>';
+}
+
+async function loadData() {
+  // Notifications
+  const nr = await fetch('/notifications/' + userId);
+  const nd = await nr.json();
+  if (nd.notifications?.length) {
+    document.getElementById('notif-section').style.display = 'block';
+    document.getElementById('notif-list').innerHTML = nd.notifications.reverse().map(n =>
+      `<div class="notif-item">${n.message}<div class="time">${new Date(n.time).toLocaleString()}</div></div>`
+    ).join('');
+    fetch('/notifications/mark-read', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({targetId: userId}) });
+  }
+
+  // Requests
+  const rr = await fetch('/requests/student?studentId=' + userId);
+  const rd = await rr.json();
+  const reqs = rd.requests || [];
+
+  const active = reqs.find(r => ['nurse','incharge','hod','otp_ready'].includes(r.status));
+  const activeSection = document.getElementById('active-req-section');
+  const otpSection = document.getElementById('otp-section');
+  const formSection = document.getElementById('form-section');
+
+  if (active) {
+    activeSection.style.display = 'block';
+    formSection.style.display = 'none';
+    let html = `<div class="req-card">`;
+    html += `<div class="req-info"><div class="label">Category</div><div class="value">${active.category.toUpperCase()} — ${active.reason}</div></div>`;
+    html += trackSteps(active);
+    html += `<div style="font-size:12px;color:var(--muted)">Submitted: ${new Date(active.createdAt).toLocaleString()}</div>`;
+    html += '</div>';
+    document.getElementById('active-req-content').innerHTML = html;
+
+    if (active.status === 'otp_ready') {
+      otpSection.style.display = 'block';
+      document.getElementById('otp-val').textContent = active.otp;
+      if (otpInterval) clearInterval(otpInterval);
+      otpInterval = setInterval(() => {
+        const left = Math.max(0, Math.floor((active.otpExpiry - Date.now()) / 1000));
+        const m = Math.floor(left/60), s = left%60;
+        document.getElementById('otp-timer').textContent = left > 0 ? `⏱ Expires in ${m}m ${s}s` : '❌ OTP Expired';
+        if (left === 0) clearInterval(otpInterval);
+      }, 1000);
+    } else {
+      otpSection.style.display = 'none';
+    }
+  } else {
+    activeSection.style.display = 'none';
+    otpSection.style.display = 'none';
+    formSection.style.display = 'block';
+    if (otpInterval) clearInterval(otpInterval);
+    // Check if student already has 1 request today — show resubmit reason section if so
+    checkAndShowResubmitSection();
+  }
+
+  // History
+  const past = reqs.filter(r => ['exited','rejected','expired'].includes(r.status)).reverse();
+  const hist = document.getElementById('history-list');
+  if (!past.length) {
+    hist.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>No past requests</div></div>';
+  } else {
+    hist.innerHTML = past.map(r => `
+      <div class="req-card">
+        <div class="req-row">
+          <div class="req-info">
+            <div class="label">Category</div><div class="value">${r.category} — ${r.reason}</div>
+            <div class="label">Date</div><div class="value">${new Date(r.createdAt).toLocaleString()}</div>
+            ${r.status==='exited' ? `<div class="label">Exited At</div><div class="value">${new Date(r.exitedAt).toLocaleString()}</div>` : ''}
+            ${r.status==='rejected' ? `<div class="label">Rejected By</div><div class="value">${r.rejectedBy} — ${r.rejectionReason || ''}</div>` : ''}
+          </div>
+          <div>${statusBadge(r.status)}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function statusBadge(s) {
+  if (s==='exited') return '<span class="badge badge-green">✅ Exited</span>';
+  if (s==='rejected') return '<span class="badge badge-red">❌ Rejected</span>';
+  if (s==='expired') return '<span class="badge badge-yellow">⌛ Expired</span>';
+  return `<span class="badge badge-blue">${s}</span>`;
+}
+
+loadData();
+setInterval(loadData, 5000);
+
+// ─── Profile Modal ─────────────────────────────────────────────────────────────
+async function openProfileModal() {
+  document.getElementById('profile-overlay').classList.add('open');
+  const role = sessionStorage.getItem('role');
+  const uid  = sessionStorage.getItem('userId');
+  const res  = await fetch('/profile/' + role + '/' + encodeURIComponent(uid));
+  const data = await res.json();
+  const el   = document.getElementById('profile-content');
+  if (!data.success) { el.innerHTML = '<div style="color:var(--danger);font-size:13px">Failed to load profile.</div>'; return; }
+  const p = data.profile;
+  if (p.type === 'student') {
+    const photoHtml = p.photo
+      ? `<img src="${p.photo}" class="pm-photo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      + `<div class="pm-photo-placeholder" style="display:none">🎓</div>`
+      : `<div class="pm-photo-placeholder">🎓</div>`;
+    el.innerHTML = photoHtml +
+      row('Name', p.name || '—') +
+      row('Roll Number', p.rollNumber || '—') +
+      row('Branch', p.branch || '—') +
+      row('Student Phone', p.studentPhone || '—') +
+      row('Parent Name', p.parentName || '—') +
+      row('Parent Phone', p.parentPhone || '—') +
+      (p.email ? row('Email', p.email) : '') +
+      row('Role', '<span class="pm-badge">Student</span>');
+  } else {
+    const roleIcons = {hod:'🏫',incharge:'📋',nurse:'🏥',security:'🔒'};
+    const icon = roleIcons[p.role] || '👤';
+    el.innerHTML =
+      `<div class="pm-photo-placeholder">${icon}</div>` +
+      (p.name ? row('Name', p.name) : '') +
+      row('Staff ID', p.id || '—') +
+      row('Role', `<span class="pm-badge">${(p.role||'').toUpperCase()}</span>`) +
+      (p.email ? row('Email', p.email) : '') +
+      (p.phone ? row('Phone', p.phone) : '');
+  }
+}
+function row(label, value) {
+  return `<div class="pm-row"><div class="pm-label">${label}</div><div class="pm-value">${value}</div></div>`;
+}
+function closeProfileModal() {
+  document.getElementById('profile-overlay').classList.remove('open');
+}
+function closeProfile(e) {
+  if (e.target === document.getElementById('profile-overlay')) closeProfileModal();
+}
+</script>
+
+<!-- Profile Modal -->
+<div class="profile-modal-overlay" id="profile-overlay" onclick="closeProfile(event)">
+  <div class="profile-modal">
+    <button class="profile-modal-close" onclick="closeProfileModal()">✕</button>
+    <div class="profile-modal-title">👤 My Profile</div>
+    <div id="profile-content"><div style="color:var(--muted);font-size:13px">Loading...</div></div>
+  </div>
+</div>
+</body>
+</html>

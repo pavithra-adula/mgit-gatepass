@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
+const cron = require('node-cron');
 const app = express();
 
 // ─── MongoDB Connection ───────────────────────────────────────────────────────
@@ -116,6 +117,32 @@ function normalizeRole(role) {
   return String(role || '').toLowerCase().trim();
 }
 
+// ─── AUTOMATIC CLEANUP: Delete all requests every 24 hours ───────────────────
+// Runs at midnight every day (00:00)
+cron.schedule('0 0 * * *', () => {
+  console.log('🧹 Running daily cleanup: deleting all old gate pass requests...');
+  try {
+    write(FILES.requests, []);
+    write(FILES.notifications, []);
+    console.log('✅ Daily cleanup complete: requests and notifications cleared.');
+  } catch (err) {
+    console.error('❌ Daily cleanup failed:', err);
+  }
+});
+
+// ─── Helper: count today's requests for a student ────────────────────────────
+function getTodayRequestCount(studentId) {
+  const requests = read(FILES.requests);
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const startTs = startOfDay.getTime();
+
+  return requests.filter(r =>
+    r.studentId === studentId &&
+    r.createdAt >= startTs
+  ).length;
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 app.post('/login', async (req, res) => {
   try {
@@ -150,7 +177,7 @@ app.post('/login', async (req, res) => {
 
   return res.json({
     success: true,
-    user: studentToSafe(student)
+    user: student
   });
 } else {
       // Staff login — try MongoDB first, fallback to hardcoded
@@ -296,20 +323,64 @@ app.get('/profile/:role/:id', async (req, res) => {
   }
 });
 
+// ─── CHECK DAILY REQUEST COUNT ────────────────────────────────────────────────
+// Frontend calls this to know how many requests the student has made today
+// and whether a resubmit reason is required.
+app.get('/request-count-today/:studentId', (req, res) => {
+  const { studentId } = req.params;
+  const count = getTodayRequestCount(studentId);
+  res.json({ success: true, count });
+});
+
 // ─── CREATE REQUEST ───────────────────────────────────────────────────────────
 app.post('/create-request', async (req, res) => {
   try {
-    const { studentId, category, reason, otherReason, file, entryTime, exitTime } = req.body;
+    const { studentId, category, reason, otherReason, file, entryTime, exitTime,
+            resubmitReason, resubmitOtherText } = req.body;
 
     const student = await Student.findOne({ rollNumber: studentId });
     if (!student) return res.json({ success: false, message: 'Student not found in database.' });
 
     const requests = read(FILES.requests);
+
+    // ── Active request guard ──────────────────────────────────────────────────
     const active = requests.find(r =>
       r.studentId === studentId &&
       ['pending', 'nurse', 'incharge', 'hod', 'otp_ready'].includes(r.status)
     );
     if (active) return res.json({ success: false, message: 'You already have a pending request.' });
+
+    // ── Daily limit: max 2 requests per student per day ───────────────────────
+    const todayCount = getTodayRequestCount(studentId);
+
+    if (todayCount >= 2) {
+      return res.json({
+        success: false,
+        message: 'Daily request limit reached. You can submit a maximum of 2 requests per day.'
+      });
+    }
+
+    if (todayCount === 1) {
+      // Second request requires a resubmit reason
+      const validResubmitReasons = ['OTP expired', 'Other'];
+      if (!resubmitReason || !validResubmitReasons.includes(resubmitReason)) {
+        return res.json({
+          success: false,
+          requiresResubmitReason: true,
+          message: 'Please select a reason for submitting a second request today.'
+        });
+      }
+      if (resubmitReason === 'Other') {
+        const otherText = (resubmitOtherText || '').trim();
+        if (!otherText) {
+          return res.json({
+            success: false,
+            requiresResubmitReason: true,
+            message: 'Please provide a reason in the text field.'
+          });
+        }
+      }
+    }
 
     const reqObj = {
       requestId:   'REQ_' + Date.now(),
@@ -322,6 +393,9 @@ app.post('/create-request', async (req, res) => {
       exitTime:    exitTime    || null,
       status:      category === 'medical' ? 'nurse' : 'incharge',
       createdAt:   Date.now(),
+      // Store resubmit info for audit trail
+      resubmitReason:    resubmitReason    || null,
+      resubmitOtherText: resubmitOtherText || null,
       studentData: {
         id:           student.rollNumber,
         rollNumber:   student.rollNumber,
@@ -399,8 +473,8 @@ app.post('/approve', (req, res) => {
     r.status        = 'otp_ready';
     r.hodApprovedAt = Date.now();
     r.otp           = otp;
-    r.otpExpiry     = Date.now() + 600000;
-    addNotification(r.studentId, 'student', 'HOD approved! Your OTP is: ' + otp + '. Valid for 10 minutes.');
+    r.otpExpiry     = Date.now() + 1800000; // 30 minutes (changed from 600000 / 10 min)
+    addNotification(r.studentId, 'student', 'HOD approved! Your OTP is: ' + otp + '. Valid for 30 minutes.');
     addNotification('all_security', 'security', 'Student ' + r.studentId + ' OTP ready for exit.');
 
   } else {
