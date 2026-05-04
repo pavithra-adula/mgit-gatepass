@@ -18,7 +18,7 @@
 .history-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .history-filters input,.history-filters select{padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;outline:none;min-width:140px}
 .history-filters input:focus,.history-filters select:focus{border-color:var(--accent)}
-.history-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1100px}
+.history-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1180px}
 .history-table th{background:var(--card2);padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:1}
 .history-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;max-width:160px;word-break:break-word}
 .history-table tr:hover td{background:rgba(212,175,55,.07)}
@@ -101,7 +101,7 @@
           <thead>
             <tr>
               <th>#</th><th>Roll No.</th><th>Student Name</th><th>Branch</th><th>Parent Phone</th>
-              <th>Category</th><th>Reason</th><th>Date of Request</th><th>Exit Time</th>
+              <th>Category</th><th>Req #</th><th>Reason</th><th>Date of Request</th><th>Exit Time</th>
               <th>Status</th><th>Approved By</th><th>Rejected By</th><th>Rejection Reason</th>
             </tr>
           </thead>
@@ -144,9 +144,21 @@ function logout() { sessionStorage.clear(); window.location = 'index.html'; }
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
 function requestTypeLabel(r) {
-  if (r.status === 'blocked' || r.requestCount >= 3) return 'Blocked';
+  if (r.requestCount === 1) return 'First Request';
   if (r.requestCount === 2) return 'Second Request';
-  return 'First Request';
+  if (r.status === 'blocked' || r.requestCount >= 3) return 'Blocked';
+  return '—';
+}
+
+function historyApprovalStatus(r) {
+  if (r.status === 'exited') return 'Approved';
+  if (r.status === 'rejected') return 'Rejected';
+  const statusLabel = {
+    nurse: 'At Nurse', incharge: 'At In-Charge', hod: 'At HOD',
+    otp_ready: 'OTP Ready', exited: 'Approved', rejected: 'Rejected',
+    blocked: 'Blocked', expired: 'Expired', pending: 'Pending'
+  };
+  return statusLabel[r.status] || r.status || '—';
 }
 
 function requestStatusLabel(status) {
@@ -220,7 +232,8 @@ async function load() {
         <div class="req-row">
           <div class="req-info">
             <div class="label">Student</div><div class="value big">${r.studentId}</div>
-            <div class="label">Category & Reason</div><div class="value">${r.category.toUpperCase()} — ${r.reason}</div>
+            <div class="label">Category</div><div class="value">${r.category.toUpperCase()}</div>
+            <div class="label">Reason</div><div class="value">${r.reason || '—'}</div>
             <div class="label">Request Type</div><div class="value">${reqType}</div>
             <div class="label">Status</div><div class="value">${status}</div>
             <div class="label">Branch</div><div class="value">${r.studentData?.branch||'N/A'}</div>
@@ -262,17 +275,22 @@ async function load() {
   if (!approved.length) {
     al.innerHTML = '<div class="empty-state"><div class="icon">✅</div><div>No approvals yet today</div></div>';
   } else {
-    al.innerHTML = approved.map(r => `<div class="req-card">
+    al.innerHTML = approved.map(r => {
+      const reqType = requestTypeLabel(r);
+      return `<div class="req-card">
       <div class="req-row">
         <div class="req-info">
           <div class="label">Student</div><div class="value big">${r.studentId}</div>
-          <div class="label">Category & Reason</div><div class="value">${r.category.toUpperCase()} — ${r.reason}</div>
+          <div class="label">Category</div><div class="value">${r.category.toUpperCase()}</div>
+          <div class="label">Reason</div><div class="value">${r.reason || '—'}</div>
+          <div class="label">Request Type</div><div class="value">${reqType}</div>
           <div class="label">Branch</div><div class="value">${r.studentData?.branch||'N/A'}</div>
           <div class="label">Approved At</div><div class="value">${new Date(r.hodApprovedAt).toLocaleString()}</div>
         </div>
         <span class="badge badge-green">approved</span>
       </div>
-    </div>`).join('');
+    </div>`;
+    }).join('');
   }
 }
 
@@ -312,32 +330,28 @@ async function loadHistory() {
 
   const tbody = document.getElementById('history-tbody');
   const countEl = document.getElementById('history-count');
-  tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>';
 
   try {
     const res  = await fetch('/history?' + params.toString());
     const data = await res.json();
-    if (!data.success) { tbody.innerHTML = '<tr><td colspan="13" style="color:var(--danger);text-align:center;padding:20px">Failed to load.</td></tr>'; return; }
+    if (!data.success) { tbody.innerHTML = '<tr><td colspan="14" style="color:var(--danger);text-align:center;padding:20px">Failed to load.</td></tr>'; return; }
     const rows = data.history || [];
     countEl.textContent = rows.length + ' record(s) found';
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:30px">No records found for selected filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:30px">No records found for selected filters.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map((r,i) => {
       const statusClass = 'ht-' + (r.status||'pending').replace(/[^a-z_]/g,'');
-      const statusLabel = {
-        nurse:'At Nurse',incharge:'At In-Charge',hod:'At HOD',
-        otp_ready:'OTP Ready',exited:'Exited ✅',rejected:'Rejected ❌',
-        blocked:'Blocked ⛔',expired:'Expired ⏰',pending:'Pending'
-      }[r.status] || r.status;
+      const approvalStatus = historyApprovalStatus(r);
       const catClass = 'ht-'+(r.category||'');
       const dateStr  = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
       const timeStr  = r.createdAt ? new Date(r.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '';
       const exitStr  = r.exitedAt  ? new Date(r.exitedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : (r.exitTime || '—');
       const rejBy    = r.rejectedBy ? r.rejectedBy.charAt(0).toUpperCase()+r.rejectedBy.slice(1) : '—';
-      const reason   = r.reason + (r.otherReason ? ' ('+r.otherReason+')' : '');
-      const reqType  = requestTypeLabel(r);
+      const reason   = (r.reason || '') + (r.otherReason ? ' ('+r.otherReason+')' : '');
+      const reqNum   = r.requestCount != null && r.requestCount !== '' ? r.requestCount : '—';
       return `<tr>
         <td style="color:var(--muted)">${i+1}</td>
         <td><b>${r.rollNumber||'—'}</b></td>
@@ -345,17 +359,18 @@ async function loadHistory() {
         <td>${r.branch||'—'}</td>
         <td>${r.parentPhone||'—'}</td>
         <td><span class="${catClass}">${(r.category||'—').toUpperCase()}</span></td>
-        <td style="max-width:150px">${reason||'—'}<div style="font-size:10px;color:var(--muted)">Type: ${reqType}</div></td>
+        <td>${reqNum}</td>
+        <td style="max-width:160px">${reason||'—'}</td>
         <td><div>${dateStr}</div><div style="font-size:10px;color:var(--muted)">${timeStr}</div></td>
         <td>${exitStr}</td>
-        <td><span class="ht-badge ${statusClass}">${statusLabel}</span></td>
+        <td><span class="ht-badge ${statusClass}" title="${r.status||''}">${approvalStatus}</span></td>
         <td>${r.approvedBy||'—'}</td>
         <td>${r.rejectedBy?rejBy:'—'}</td>
         <td style="max-width:140px;color:var(--danger)">${r.rejectionReason||'—'}</td>
       </tr>`;
     }).join('');
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="13" style="color:var(--danger);text-align:center;padding:20px">Error loading history.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="color:var(--danger);text-align:center;padding:20px">Error loading history.</td></tr>';
   }
 }
 

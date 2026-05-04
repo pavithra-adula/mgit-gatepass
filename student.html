@@ -238,7 +238,7 @@ async function submitRequest() {
   let body = {
     studentId: userId,
     category: selectedCat,
-    reason,
+    reason: todayRequestCount === 1 ? secondReason : reason,
     otherReason: '',
     requestCount: todayRequestCount + 1,
     secondRequestReason: secondReason

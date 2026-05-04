@@ -165,9 +165,10 @@ function switchTab(tab, el) {
 }
 
 function requestTypeLabel(r) {
-  if (r.status === 'blocked' || r.requestCount >= 3) return 'Blocked';
+  if (r.requestCount === 1) return 'First Request';
   if (r.requestCount === 2) return 'Second Request';
-  return 'First Request';
+  if (r.status === 'blocked' || r.requestCount >= 3) return 'Blocked';
+  return '—';
 }
 
 function requestStatusLabel(status) {
@@ -311,7 +312,8 @@ async function load() {
       <div class="req-row">
         <div class="req-info">
           <div class="label">Student</div><div class="value big">${r.studentId}</div>
-          <div class="label">Category & Reason</div><div class="value">${r.category.toUpperCase()} — ${r.reason}${r.otherReason ? ` <em>(${r.otherReason})</em>` : ''}</div>
+          <div class="label">Category</div><div class="value">${r.category.toUpperCase()}</div>
+          <div class="label">Reason</div><div class="value">${r.reason}${r.otherReason ? ` <em>(${r.otherReason})</em>` : ''}</div>
           <div class="label">Request Type</div><div class="value">${reqType}</div>
           <div class="label">Status</div><div class="value">${status}</div>
           <div class="label">Branch</div><div class="value">${r.studentData?.branch||'N/A'}</div>

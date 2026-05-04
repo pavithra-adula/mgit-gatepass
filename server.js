@@ -329,12 +329,6 @@ app.post('/create-request', async (req, res) => {
       });
     }
 
-    const active = requests.find(r =>
-      r.studentId === studentId &&
-      ['pending', 'nurse', 'incharge', 'hod', 'otp_ready'].includes(r.status)
-    );
-    if (active) return res.json({ success: false, message: 'You already have a pending request.' });
-
     const reqObj = {
       requestId:   'REQ_' + Date.now(),
       studentId,
