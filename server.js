@@ -302,12 +302,33 @@ app.get('/profile/:role/:id', async (req, res) => {
 // ─── CREATE REQUEST ───────────────────────────────────────────────────────────
 app.post('/create-request', async (req, res) => {
   try {
-    const { studentId, category, reason, otherReason, file, entryTime, exitTime } = req.body;
+    const { studentId, category, reason, otherReason, file, entryTime, exitTime, requestCount, secondRequestReason } = req.body;
 
     const student = await Student.findOne({ rollNumber: studentId });
     if (!student) return res.json({ success: false, message: 'Student not found in database.' });
 
     const requests = read(FILES.requests);
+    const today = new Date().toISOString().slice(0, 10);
+    const todayRequests = requests.filter(r =>
+      r.studentId === studentId &&
+      new Date(r.createdAt).toISOString().slice(0, 10) === today
+    );
+    const count = todayRequests.length;
+
+    if (count === 1 && !reason) {
+      return res.json({
+        success: false,
+        message: "Please provide reason for second request."
+      });
+    }
+
+    if (count >= 2) {
+      return res.json({
+        success: false,
+        message: "You can only submit 2 requests per day."
+      });
+    }
+
     const active = requests.find(r =>
       r.studentId === studentId &&
       ['pending', 'nurse', 'incharge', 'hod', 'otp_ready'].includes(r.status)
@@ -323,8 +344,11 @@ app.post('/create-request', async (req, res) => {
       file:        file        || null,
       entryTime:   entryTime   || null,
       exitTime:    exitTime    || null,
+      requestCount: count + 1,
       status:      category === 'medical' ? 'nurse' : 'incharge',
       createdAt:   Date.now(),
+      reason:      reason || '',
+      secondRequestReason: secondRequestReason || '',
       studentData: {
         id:           student.rollNumber,
         rollNumber:   student.rollNumber,
@@ -627,6 +651,7 @@ app.get('/history', async (req, res) => {
         reason:          r.reason         || '',
         otherReason:     r.otherReason    || '',
         status:          r.status         || '',
+        requestCount:    r.requestCount   || null,
         createdAt:       r.createdAt      || null,
         exitTime:        r.exitTime       || null,
         exitedAt:        r.exitedAt       || null,
