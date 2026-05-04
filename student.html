@@ -122,6 +122,17 @@
       </div>
     </div>
 
+    <div id="second-request-reason" style="display:none;margin:8px 0 14px 0;padding:10px;border:1px solid var(--border);border-radius:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">Reason for second request (today)</div>
+      <label style="display:block;font-size:13px;margin-bottom:6px">
+        <input type="radio" name="second-reason" value="OTP expired" onchange="handleSecondReasonChange()"> OTP expired
+      </label>
+      <label style="display:block;font-size:13px;margin-bottom:6px">
+        <input type="radio" name="second-reason" value="Other" onchange="handleSecondReasonChange()"> Other
+      </label>
+      <input type="text" id="second-reason-other" placeholder="Enter other reason..." style="display:none;width:100%">
+    </div>
+
     <div id="form-msg" style="margin:10px 0;font-size:13px;color:var(--muted)"></div>
     <button class="btn btn-primary" id="submit-btn" onclick="submitRequest()">Submit Request →</button>
   </div>
@@ -157,6 +168,7 @@ document.getElementById('uid-display').textContent = userId;
 
 let selectedCat = '';
 let otpInterval = null;
+let todayRequestCount = 0;
 
 function logout() { sessionStorage.clear(); window.location = 'index.html'; }
 
@@ -179,8 +191,27 @@ function handleOtherReason(cat) {
   }
 }
 
+function getSecondRequestReason() {
+  const selected = document.querySelector('input[name="second-reason"]:checked');
+  if (!selected) return '';
+  if (selected.value === 'Other') return (document.getElementById('second-reason-other').value || '').trim();
+  return selected.value;
+}
+
+function handleSecondReasonChange() {
+  const selected = document.querySelector('input[name="second-reason"]:checked');
+  const other = document.getElementById('second-reason-other');
+  if (selected && selected.value === 'Other') {
+    other.style.display = 'block';
+  } else {
+    other.style.display = 'none';
+    other.value = '';
+  }
+}
+
 async function submitRequest() {
   if (!selectedCat) return setMsg('Select a category first');
+  if (todayRequestCount >= 2) return setMsg('You have reached today\'s request limit.');
   const btn = document.getElementById('submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
 
@@ -197,7 +228,21 @@ async function submitRequest() {
     reason = selValue;
   }
 
-  let body = { studentId: userId, category: selectedCat, reason, otherReason: '' };
+  const secondReason = todayRequestCount === 1 ? getSecondRequestReason() : '';
+  if (todayRequestCount === 1 && !secondReason) {
+    setMsg('Please provide reason for second request.');
+    btn.disabled = false; btn.textContent = 'Submit Request →';
+    return;
+  }
+
+  let body = {
+    studentId: userId,
+    category: selectedCat,
+    reason,
+    otherReason: '',
+    requestCount: todayRequestCount + 1,
+    secondRequestReason: secondReason
+  };
 
 
 
@@ -223,6 +268,9 @@ async function submitRequest() {
       const field = document.getElementById('other-field-' + c);
       if (field) field.style.display = 'none';
     });
+    document.querySelectorAll('input[name="second-reason"]').forEach(r => { r.checked = false; });
+    document.getElementById('second-reason-other').value = '';
+    document.getElementById('second-reason-other').style.display = 'none';
     loadData();
   } else {
     setMsg('❌ ' + (data.message || 'Submission failed'));
@@ -309,6 +357,27 @@ async function loadData() {
     otpSection.style.display = 'none';
     formSection.style.display = 'block';
     if (otpInterval) clearInterval(otpInterval);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const todaysRequests = reqs.filter(r =>
+      r.createdAt && new Date(r.createdAt).toISOString().slice(0, 10) === today
+    );
+    todayRequestCount = todaysRequests.length;
+    const secondReasonBox = document.getElementById('second-request-reason');
+    const submitBtn = document.getElementById('submit-btn');
+    if (todayRequestCount === 1) {
+      secondReasonBox.style.display = 'block';
+      submitBtn.disabled = false;
+      setMsg('Second request today: please provide a reason below.');
+    } else if (todayRequestCount >= 2) {
+      secondReasonBox.style.display = 'none';
+      submitBtn.disabled = true;
+      setMsg('You have reached today\'s request limit.');
+    } else {
+      secondReasonBox.style.display = 'none';
+      submitBtn.disabled = false;
+      setMsg('');
+    }
   }
 
   // History
