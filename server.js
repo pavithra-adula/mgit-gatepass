@@ -36,6 +36,9 @@ const staffSchema = new mongoose.Schema({
 });
 const Staff = mongoose.model('Staff', staffSchema);
 
+const OTP_EXPIRY_MINUTES = 30;
+const OTP_EXPIRY_MS = OTP_EXPIRY_MINUTES * 60 * 1000;
+
 // ─── Hardcoded Staff Fallback ─────────────────────────────────────────────────
 // These are used ONLY if MongoDB Staff collection returns no result.
 // Matches final_staff_credentials.xlsx exactly.
@@ -399,8 +402,8 @@ app.post('/approve', (req, res) => {
     r.status        = 'otp_ready';
     r.hodApprovedAt = Date.now();
     r.otp           = otp;
-    r.otpExpiry     = Date.now() + 600000;
-    addNotification(r.studentId, 'student', 'HOD approved! Your OTP is: ' + otp + '. Valid for 10 minutes.');
+    r.otpExpiry     = Date.now() + OTP_EXPIRY_MS;
+    addNotification(r.studentId, 'student', 'HOD approved! Your OTP is: ' + otp + '. Valid for 30 minutes.');
     addNotification('all_security', 'security', 'Student ' + r.studentId + ' OTP ready for exit.');
 
   } else {
