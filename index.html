@@ -7,6 +7,27 @@
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
+  --navy: #1b2942;
+  --navy2: #344968;
+  --gold: #b8960c;
+  --gold-light: #d4af37;
+  --gold-pale: rgba(212,175,55,0.15);
+  --white: #1f2937;
+  --off-white: #111827;
+  --text-light: rgba(17,24,39,0.86);
+  --text-muted: rgba(17,24,39,0.62);
+  --border-gold: rgba(212,175,55,0.35);
+  --card-bg: rgba(255,255,255,0.93);
+  --input-bg: rgba(255,255,255,0.78);
+  --success: #22c55e;
+  --danger: #ef4444;
+  --overlay-1: rgba(255,255,255,0.52);
+  --overlay-2: rgba(255,255,255,0.74);
+  --overlay-3: rgba(255,255,255,0.88);
+  --card-shadow: 0 18px 44px rgba(15,23,42,0.16), inset 0 1px 0 rgba(212,175,55,0.18);
+}
+
+[data-theme="dark"] {
   --navy: #0a1628;
   --navy2: #122040;
   --gold: #b8960c;
@@ -19,8 +40,10 @@
   --border-gold: rgba(212,175,55,0.35);
   --card-bg: rgba(8,18,38,0.88);
   --input-bg: rgba(255,255,255,0.07);
-  --success: #22c55e;
-  --danger: #ef4444;
+  --overlay-1: rgba(8,18,38,0.72);
+  --overlay-2: rgba(8,18,38,0.80);
+  --overlay-3: rgba(8,18,38,0.90);
+  --card-shadow: 0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.12);
 }
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
@@ -49,9 +72,9 @@ body {
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(8,18,38,0.72) 0%,
-    rgba(8,18,38,0.80) 40%,
-    rgba(8,18,38,0.90) 100%
+    var(--overlay-1) 0%,
+    var(--overlay-2) 40%,
+    var(--overlay-3) 100%
   );
   z-index: 1;
 }
@@ -67,6 +90,20 @@ body {
   flex-direction: column;
   align-items: center;
 }
+
+.theme-toggle-btn {
+  align-self: flex-end;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-gold);
+  border-radius: 3px;
+  background: var(--card-bg);
+  color: var(--text-light);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.theme-toggle-btn:hover { color: var(--gold-light); border-color: var(--gold-light); }
 
 /* Header â€” logo + college name */
 .college-header {
@@ -124,7 +161,7 @@ body {
   width: 100%;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.12);
+  box-shadow: var(--card-shadow);
 }
 
 /* Sections */
@@ -317,6 +354,7 @@ body {
 <div class="bg-overlay"></div>
 
 <div class="portal-wrap">
+  <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()">Dark Mode</button>
 
   <!-- College Header -->
   <div class="college-header">
@@ -372,6 +410,25 @@ body {
 </div>
 
 <script>
+function initTheme() {
+  const saved = localStorage.getItem('sp_theme');
+  const theme = saved === 'dark' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('sp_theme', next);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+}
+
+initTheme();
+
 let selectedRole = '';
 
 function selectRole(role, btn) {
