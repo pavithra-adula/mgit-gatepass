@@ -384,7 +384,7 @@ function selectRole(role, btn) {
 }
 
 function showSection(id) {
-  if (!selectedRole && id !== 'sec-roles') { alert('Please select a role first.'); return; }
+  if (!selectedRole && id !== 'sec-roles') { return; }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   clearMsgs();
