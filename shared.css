@@ -836,3 +836,48 @@ html[data-theme="dark"] body.security-dashboard{
     linear-gradient(180deg, rgba(10,22,40,0.78), rgba(10,22,40,0.9)),
     var(--bg);
 }
+
+/* Hard reset for light mode to defeat legacy dark overrides */
+html[data-theme="light"] body.student-dashboard,
+html[data-theme="light"] body.incharge-dashboard,
+html[data-theme="light"] body.hod-dashboard,
+html[data-theme="light"] body.nurse-dashboard,
+html[data-theme="light"] body.security-dashboard{
+  background: var(--bg) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="light"] body.student-dashboard .page-title,
+html[data-theme="light"] body.incharge-dashboard .page-title,
+html[data-theme="light"] body.hod-dashboard .page-title,
+html[data-theme="light"] body.nurse-dashboard .page-title,
+html[data-theme="light"] body.security-dashboard .page-title,
+html[data-theme="light"] body.student-dashboard .topbar-logo,
+html[data-theme="light"] body.incharge-dashboard .topbar-logo,
+html[data-theme="light"] body.hod-dashboard .topbar-logo,
+html[data-theme="light"] body.nurse-dashboard .topbar-logo,
+html[data-theme="light"] body.security-dashboard .topbar-logo{
+  color: var(--text) !important;
+}
+
+html[data-theme="light"] body.student-dashboard .field input,
+html[data-theme="light"] body.student-dashboard .field select,
+html[data-theme="light"] body.student-dashboard .field textarea,
+html[data-theme="light"] body.incharge-dashboard .field input,
+html[data-theme="light"] body.incharge-dashboard .field select,
+html[data-theme="light"] body.incharge-dashboard .field textarea,
+html[data-theme="light"] body.hod-dashboard .field input,
+html[data-theme="light"] body.hod-dashboard .field select,
+html[data-theme="light"] body.hod-dashboard .field textarea,
+html[data-theme="light"] body.nurse-dashboard .field input,
+html[data-theme="light"] body.nurse-dashboard .field select,
+html[data-theme="light"] body.nurse-dashboard .field textarea,
+html[data-theme="light"] body.security-dashboard .field input,
+html[data-theme="light"] body.security-dashboard .field select,
+html[data-theme="light"] body.security-dashboard .field textarea,
+html[data-theme="light"] body.security-dashboard .otp-input{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
