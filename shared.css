@@ -260,81 +260,81 @@ html[data-theme="dark"] body.student-dashboard .topbar-logo{
   color: #f6f7fa;
 }
 
-body.student-dashboard .topbar-logo span{
+html[data-theme="dark"] body.student-dashboard .topbar-logo span{
   color: var(--accent);
 }
 
-body.student-dashboard .main{
+html[data-theme="dark"] body.student-dashboard .main{
   max-width: 1100px;
 }
 
-body.student-dashboard .page-title{
+html[data-theme="dark"] body.student-dashboard .page-title{
   font-family: 'EB Garamond', serif;
   font-size: 34px;
   letter-spacing: .3px;
   color: #ffffff;
 }
 
-body.student-dashboard .page-sub{
+html[data-theme="dark"] body.student-dashboard .page-sub{
   color: var(--muted);
   font-size: 15px;
 }
 
-body.student-dashboard .card{
+html[data-theme="dark"] body.student-dashboard .card{
   border: 1px solid rgba(212,175,55,0.2);
   box-shadow: 0 12px 28px rgba(0,0,0,0.28);
 }
 
-body.student-dashboard .card-title{
+html[data-theme="dark"] body.student-dashboard .card-title{
   font-family: 'Source Sans 3', sans-serif;
   color: #e3bd52;
   letter-spacing: 1.2px;
 }
 
-body.student-dashboard .req-card{
+html[data-theme="dark"] body.student-dashboard .req-card{
   background: rgba(245,241,232,0.06);
   border-color: rgba(212,175,55,0.16);
 }
 
-body.student-dashboard .req-card:hover{
+html[data-theme="dark"] body.student-dashboard .req-card:hover{
   border-color: rgba(212,175,55,0.35);
 }
 
-body.student-dashboard .badge-blue{
+html[data-theme="dark"] body.student-dashboard .badge-blue{
   background: rgba(212,175,55,0.12);
   color: #f1cc62;
   border: 1px solid rgba(212,175,55,0.35);
 }
 
-body.student-dashboard .btn-primary{
+html[data-theme="dark"] body.student-dashboard .btn-primary{
   background: var(--accent2);
   color: #fff;
 }
 
-body.student-dashboard .btn-primary:hover{
+html[data-theme="dark"] body.student-dashboard .btn-primary:hover{
   background: var(--accent);
   color: #1b2638;
 }
 
-body.student-dashboard .field input,
-body.student-dashboard .field select,
-body.student-dashboard .field textarea{
+html[data-theme="dark"] body.student-dashboard .field input,
+html[data-theme="dark"] body.student-dashboard .field select,
+html[data-theme="dark"] body.student-dashboard .field textarea{
   background: rgba(245,241,232,0.06);
   border-color: rgba(212,175,55,0.2);
 }
 
-body.student-dashboard .field input:focus,
-body.student-dashboard .field select:focus{
+html[data-theme="dark"] body.student-dashboard .field input:focus,
+html[data-theme="dark"] body.student-dashboard .field select:focus{
   border-color: rgba(212,175,55,0.7);
   box-shadow: 0 0 0 3px rgba(212,175,55,0.12);
 }
 
-body.student-dashboard .notif-item{
+html[data-theme="dark"] body.student-dashboard .notif-item{
   border-left-color: var(--accent);
   background: rgba(212,175,55,0.09);
 }
 
-body.student-dashboard .otp-display{
+html[data-theme="dark"] body.student-dashboard .otp-display{
   background: rgba(212,175,55,0.1);
   border-color: rgba(212,175,55,0.45);
   color: #f2cc63;
