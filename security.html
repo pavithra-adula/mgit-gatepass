@@ -59,21 +59,6 @@
 </div>
 
 <script>
-function initTheme(){
-  var t=localStorage.getItem('sp_theme')||'light';
-  document.documentElement.setAttribute('data-theme',t);
-  var btn=document.getElementById('theme-btn');
-  if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
-}
-function toggleTheme(){
-  var cur=document.documentElement.getAttribute('data-theme')||'light';
-  var next=cur==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',next);
-  localStorage.setItem('sp_theme',next);
-  var btn=document.getElementById('theme-btn');
-  if(btn)btn.textContent=next==='dark'?'☀ Light':'🌙 Dark';
-}
-initTheme();
 const userId = sessionStorage.getItem('userId');
 if (!userId || sessionStorage.getItem('role') !== 'security') window.location = 'index.html';
 document.getElementById('uid-display').textContent = userId;

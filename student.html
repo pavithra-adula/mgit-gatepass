@@ -24,48 +24,6 @@
 .track-line.done{background:var(--success)}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,.38)}50%{box-shadow:0 0 0 7px rgba(212,175,55,0)}}
 
-/* Keep student dashboard theme aligned with selected mode */
-html[data-theme="light"] body.student-dashboard{
-  --bg: #f0f4f8;
-  --card: #ffffff;
-  --card2: #f7f9fc;
-  --border: rgba(0,0,0,.09);
-  --accent: #5b4de0;
-  --accent2: #f97316;
-  --text: #1a1a2e;
-  --muted: #6b7280;
-  --success: #16a34a;
-  --danger: #dc2626;
-  --warning: #ca8a04;
-}
-html[data-theme="light"] body.student-dashboard .topbar{
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-}
-html[data-theme="light"] body.student-dashboard .card,
-html[data-theme="light"] body.student-dashboard .req-card,
-html[data-theme="light"] body.student-dashboard .stat-card{
-  background: var(--card);
-  border-color: var(--border);
-}
-
-html[data-theme="dark"] body.student-dashboard{
-  --bg: #0a1628;
-  --card: rgba(8,18,38,.88);
-  --card2: rgba(245,241,232,.08);
-  --border: rgba(212,175,55,.2);
-  --accent: #d4af37;
-  --accent2: #b8960c;
-  --text: #f8f9fb;
-  --muted: #c6cdd8;
-  --success: #22c55e;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-}
-html[data-theme="dark"] body.student-dashboard .topbar{
-  background: rgba(7,15,31,.96);
-  border-bottom: 1px solid rgba(212,175,55,.32);
-}
 </style>
 </head>
 <body class="student-dashboard">
@@ -187,22 +145,6 @@ html[data-theme="dark"] body.student-dashboard .topbar{
 </div>
 
 <script>
-function initTheme(){
-  var saved=localStorage.getItem('sp_theme');
-  var t=(saved==='dark')?'dark':'light';
-  document.documentElement.setAttribute('data-theme',t);
-  var btn=document.getElementById('theme-btn');
-  if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
-}
-function toggleTheme(){
-  var cur=document.documentElement.getAttribute('data-theme')||'light';
-  var next=cur==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',next);
-  localStorage.setItem('sp_theme',next);
-  var btn=document.getElementById('theme-btn');
-  if(btn)btn.textContent=next==='dark'?'☀ Light':'🌙 Dark';
-}
-initTheme();
 const userId = sessionStorage.getItem('userId');
 if (!userId || sessionStorage.getItem('role') !== 'student') {
   window.location = 'index.html';
